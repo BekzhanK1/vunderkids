@@ -8,6 +8,7 @@ class User(AbstractUser):
         ('student', 'Student'),
         ('teacher', 'Teacher'),
         ('parent', 'Parent'),
+        ('staff', 'Staff'),
     )
     email = models.EmailField(unique=True)
     first_name = models.CharField(max_length=30, blank=False)
@@ -16,6 +17,7 @@ class User(AbstractUser):
     phone_number = models.CharField(validators=[phone_regex], max_length=17, blank=True)
     role = models.CharField(max_length=7, choices=ROLE_CHOICES, default='student')
     date_of_birth = models.DateField(null=True, blank=True)
+    avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
     
     def is_student(self):
         return self.role == 'student'
