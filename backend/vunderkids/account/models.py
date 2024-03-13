@@ -8,6 +8,7 @@ class User(AbstractUser):
         ('student', 'Student'),
         ('teacher', 'Teacher'),
         ('parent', 'Parent'),
+        ('school', 'School'),
         ('staff', 'Staff'),
     )
     email = models.EmailField(unique=True)
