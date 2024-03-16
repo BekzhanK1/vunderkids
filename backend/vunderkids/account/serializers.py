@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import get_user_model
+from .models import Child
 
 User = get_user_model()
 
@@ -30,9 +31,12 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'phone_number', 'role', 'date_of_birth']
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'phone_number', 'role']
         
-        
+class ChildSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Child       
+        fields = '__all__'
         
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
