@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import get_user_model
-from .models import Child
+from account.models import *
 
 User = get_user_model()
 
@@ -32,6 +32,58 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'username', 'email', 'first_name', 'last_name', 'phone_number', 'role']
+        
+class SchoolSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = School
+        fields = '__all__'
+        
+        
+class SchoolRegistrationSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(max_length=150)
+    email = serializers.EmailField(max_length=255)
+    password = serializers.CharField(write_only=True)
+    first_name = serializers.CharField(max_length=30)
+    last_name = serializers.CharField(max_length=150)
+    phone_number = serializers.CharField(max_length=17, required=False, allow_blank=True)
+    
+    class Meta:
+        model = School
+        fields = ('name', 'city', 'username', 'email', 'password', 'first_name', 'last_name', 'phone_number')
+
+    def create(self, validated_data):
+        # Create user
+        user_data = {
+            key: validated_data.pop(key) for key in ['username', 'email', 'first_name', 'last_name', 'phone_number']
+        }
+        password = validated_data.pop('password')
+        user = User.objects.create_user(**user_data, role='principal')
+        user.set_password(password)
+        user.save()
+
+        # Create school associated with this user
+        school = School.objects.create(user=user, **validated_data)
+        return school
+        
+class TeacherSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Teacher
+        fields = '__all__'
+        
+class ClassSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Class
+        fields = '__all__'
+
+class StudentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Student
+        fields = '__all__'
+        
+class ParentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Parent
+        fields = '__all__'
         
 class ChildSerializer(serializers.ModelSerializer):
     class Meta:
