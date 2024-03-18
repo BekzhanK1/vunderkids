@@ -73,14 +73,20 @@ class ClassViewSet(viewsets.ModelViewSet):
         """
         if self.action in ['create', 'destroy']:
             permission_classes = [IsPrincipal]
+        elif self.action in ['my_class']:
+            permission_classes = [IsStudent]
         else:
             permission_classes = [IsTeacher]
         return [permission() for permission in permission_classes]
     
     def get_queryset(self):
-        principal = self.request.user
-        school = get_object_or_404(School, user = principal)
-        return Class.objects.filter(school = school)
+        user = self.request.user
+        if user.is_principal():
+            school = get_object_or_404(School, user = user)
+            return Class.objects.filter(school = school)
+        elif user.is_teacher():
+            teacher = get_object_or_404(Teacher, user = user)
+            return Class.objects.filter(school = teacher.school, teacher = teacher)
     
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
@@ -124,13 +130,31 @@ class ClassViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['patch'], permission_classes=[IsPrincipal])
     def assign_teacher(self, request, pk=None):
         school_class = self.get_object()
+        
+        if school_class.teacher is not None:
+            return Response({'message': 'There is already teacher in class'}, status=status.HTTP_403_FORBIDDEN)
+
         teacher_id = request.data.get('teacher_id')
         teacher = get_object_or_404(Teacher, pk=teacher_id, school=school_class.school)  # Ensure teacher belongs to the same school
 
+        classes = Class.objects.filter(teacher = teacher)
+        
         school_class.teacher = teacher
         school_class.save()
         return Response({'message': 'Teacher assigned successfully'}, status=status.HTTP_200_OK)
-
+    
+    @action(detail=True, methods=['patch'], permission_classes=[IsPrincipal])
+    def deassign_teacher(self, request, pk=None):
+        school_class = self.get_object()
+        teacher_id = request.data.get('teacher_id')
+        teacher = get_object_or_404(Teacher, pk=teacher_id, school=school_class.school)
+        
+        if school_class.teacher != teacher:
+            return Response({'message': 'Teacher is not assigned to this class'}, status=status.HTTP_403_FORBIDDEN)
+        
+        school_class.teacher = None
+        school_class.save()
+        return Response({'message': 'Teacher deassigned successfully'}, status=status.HTTP_200_OK)
     
     @action(detail=True, methods=['patch'], permission_classes=[IsTeacher])
     def add_student(self, request, pk=None):
@@ -139,16 +163,48 @@ class ClassViewSet(viewsets.ModelViewSet):
         if user.is_teacher():
             teacher = get_object_or_404(Teacher, user = user)
             school_class = get_object_or_404(Class, pk = pk, teacher = teacher)
-        else:
-            school_class = get_object_or_404(Class, pk = pk)
+        elif user.is_principal():
+            school = get_object_or_404(School, user = user)
+            school_class = get_object_or_404(Class, pk = pk, school = school)
         student_id = request.data.get('student_id')
         student = get_object_or_404(Student, pk=student_id, school=school_class.school)  # Ensure student is part of the same school
 
-        # Optionally check if the student is already in another class and handle according to your business logic
+        # Check if the student is already in another class 
+        
+        if student.school_class is not None:
+            return Response({'message': 'Student is already in class'}, status=status.HTTP_403_FORBIDDEN)
+             
 
         student.school_class = school_class
         student.save()
         return Response({'message': 'Student added successfully'}, status=status.HTTP_200_OK)
+    
+    @action(detail=True, methods=['patch'], permission_classes=[IsTeacher])
+    def remove_student(self, request, pk=None):
+        user = request.user
+
+        if user.is_teacher():
+            teacher = get_object_or_404(Teacher, user = user)
+            school_class = get_object_or_404(Class, pk = pk, teacher = teacher)
+        elif user.is_principal():
+            school = get_object_or_404(School, user = user)
+            school_class = get_object_or_404(Class, pk = pk, school = school)
+        student_id = request.data.get('student_id')
+        student = get_object_or_404(Student, pk=student_id, school=school_class.school, school_class=school_class)  # Ensure student is part of the same school
+
+        
+        student.school_class = None     
+        student.save()
+        return Response({'message': 'Student removed successfully'}, status=status.HTTP_200_OK)
+    
+    @action(detail = False, methods=['get'], permission_classes=[IsStudent])
+    def my_class(self, request):
+        user = request.user
+        student = get_object_or_404(Student, user = user)
+        school_class = student.school_class
+        serializer = self.serializer_class(school_class)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+        
 
 class ChildrenViewSet(viewsets.ModelViewSet):
     serializer_class = ChildSerializer
