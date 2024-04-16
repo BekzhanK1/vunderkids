@@ -127,11 +127,13 @@ class TeacherRegistrationSerializer(serializers.ModelSerializer):
         return teacher
     
 class TeacherSerializer(serializers.ModelSerializer):
+    user = UserSerializer()
     class Meta:
         model = Teacher
         fields = '__all__'
         
 class ClassSerializer(serializers.ModelSerializer):
+    teacher = TeacherSerializer()
     class Meta:
         model = Class
         fields = '__all__'
@@ -165,6 +167,7 @@ class StudentRegistrationSerializer(serializers.ModelSerializer):
         return student
     
 class StudentSerializer(serializers.ModelSerializer):
+    user = UserSerializer()
     class Meta:
         model = Student
         fields = '__all__'

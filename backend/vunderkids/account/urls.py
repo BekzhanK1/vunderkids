@@ -6,6 +6,7 @@ from .views import *
 router = SimpleRouter()
 router.register(r'children', ChildrenViewSet, basename = 'children')
 router.register(r'classes', ClassViewSet, basename = 'classes')
+router.register(r'students', StudentViewSet, basename='students')
 
 urlpatterns = [
     # path('register/', UserRegistrationAPIView.as_view()),
