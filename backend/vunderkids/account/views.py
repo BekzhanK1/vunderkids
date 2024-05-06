@@ -48,7 +48,7 @@ class TeacherRegistrationAPIView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class StudentRegistrationAPIView(APIView):
-    permission_classes = [IsTeacher]
+    permission_classes = [IsTeacher | IsPrincipal]
     def post(self, request):
         user = request.user
         if user.is_principal():
@@ -78,8 +78,8 @@ class ClassViewSet(viewsets.ModelViewSet):
             'specific_student': [IsTeacher | IsPrincipal],
             'assign_teacher': [IsPrincipal],
             'deassign_teacher': [IsPrincipal],
-            'add_student': [IsTeacher],
-            'remove_student': [IsTeacher],
+            'add_student': [IsPrincipal |IsTeacher],
+            'remove_student': [IsPrincipal | IsTeacher],
             'my_class': [IsStudent],
             'my_class_students': [IsStudent],
             'my_class_specific_student': [IsStudent]
@@ -153,7 +153,7 @@ class ClassViewSet(viewsets.ModelViewSet):
         """Deassigns the teacher from a class, given the teacher's ID."""
         school_class = self.get_object()
         if not school_class.teacher:
-            return Response({'error': 'The teacher is not assigned to this class.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'No teacher is assigned to this class.'}, status=status.HTTP_400_BAD_REQUEST)
 
         school_class.teacher = None
         school_class.save()
@@ -217,7 +217,7 @@ class ClassViewSet(viewsets.ModelViewSet):
         serializer = self.serializer_class(school_class)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
-    @action(detail = False, methods=['get'], url_path='my_class/students')
+    @action(detail = False, methods=['get'], url_path='classmates')
     def my_class_students(self, request):
         """
         Retrieve data about student's classmates
@@ -229,7 +229,7 @@ class ClassViewSet(viewsets.ModelViewSet):
         serializer = StudentSerializer(classmates, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
-    @action(detail = False, methods=['get'], url_path='my_class/students/(?P<student_id>\d+)')
+    @action(detail = False, methods=['get'], url_path='classmates/(?P<student_id>\d+)')
     def my_class_specific_student(self, request, student_id=None):
         """
         Retrieve data about student's specific classmate
@@ -302,11 +302,12 @@ class ChildrenViewSet(viewsets.ModelViewSet):
     
     def partial_update(self, request, *args, **kwargs):
         queryset = self.get_queryset()
-        child = get_object_or_404(queryset, pk = kwargs['pk'])
+        child = get_object_or_404(queryset, pk=kwargs['pk'])
         data = request.data.copy()
         data.pop('parent', None)
-        serializer = self.serializer_class(child, data = data, partial = True)
+        serializer = self.serializer_class(child, data=data, partial=True)
         serializer.is_valid(raise_exception=True)
+
         serializer.save()
         return Response(serializer.data)
     

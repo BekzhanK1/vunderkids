@@ -133,7 +133,7 @@ class TeacherSerializer(serializers.ModelSerializer):
         fields = '__all__'
         
 class ClassSerializer(serializers.ModelSerializer):
-    teacher = TeacherSerializer()
+    teacher = TeacherSerializer(allow_null=True, required=False)
     class Meta:
         model = Class
         fields = '__all__'

@@ -88,6 +88,9 @@ class Teacher(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='teacher')
     subject = models.CharField(max_length=150, blank=False)
     school = models.ForeignKey(School, on_delete=models.SET_NULL, null = True, blank = True, related_name='teachers')
+
+    def __str__(self):
+        return f"Teacher: {self.user.first_name} {self.user.last_name}"
     
     
 class Class(models.Model):
@@ -131,6 +134,7 @@ class Child(models.Model):
     
     def __str__(self):
         return f"[Child] {self.first_name} {self.last_name}"
+    
     
     
     
