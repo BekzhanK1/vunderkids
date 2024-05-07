@@ -189,13 +189,24 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         data = super().validate(attrs)
 
+        if self.user.is_principal():
+            enitity_id = School.objects.get(user=self.user).pk
+        elif self.user.is_teacher():
+            enitity_id = Teacher.objects.get(user=self.user).pk
+        elif self.user.is_student():
+            enitity_id = Student.objects.get(user=self.user).pk
+        elif self.user.is_parent():
+            enitity_id = Parent.objects.get(user=self.user).pk
+        else:
+            enitity_id = None
+
         data['user'] = {
-            'id': self.user.id,
-            # 'username': self.user.username,
+            'user_id': self.user.id,
             'email': self.user.email,
             'first_name': self.user.first_name,
             'last_name': self.user.last_name,
-            'role': self.user.role
+            'role': self.user.role,
+            'entity_id': enitity_id
         }
 
         return data

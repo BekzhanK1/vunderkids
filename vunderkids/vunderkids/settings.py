@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'api',
     'account',
+    'tasks',
 ]
 
 REST_FRAMEWORK = {
@@ -158,7 +159,7 @@ AUTHENTICATION_BACKENDS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Qostanay'
 
 USE_I18N = True
 

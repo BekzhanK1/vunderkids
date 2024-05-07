@@ -2,6 +2,8 @@ from django.db import models
 from django.contrib.auth.models import AbstractBaseUser
 from django.core.validators import RegexValidator
 from django.contrib.auth.models import BaseUserManager, PermissionsMixin
+
+from tasks.models import League
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
         """
@@ -118,9 +120,17 @@ class Student(models.Model):
     gpa = models.SmallIntegerField(default=4, blank=True, null=True)
     school_class = models.ForeignKey(Class, on_delete=models.SET_NULL, null=True, blank=True, related_name='students')
     school = models.ForeignKey(School, on_delete=models.SET_NULL, null = True, blank = True, related_name='students')
-    
+    xp = models.PositiveIntegerField(default=0)
+    league = models.ForeignKey(League, on_delete=models.SET_NULL, null=True, blank=True, related_name='students')
+
+    def __str__(self) -> str:
+        return f"[Student] {self.user.first_name} {self.user.last_name}"
+
 class Parent(models.Model):
     user = models.OneToOneField(User, on_delete = models.CASCADE, related_name = 'parent')
+    
+    def __str__(self) -> str:
+        return f"[Parent] {self.user.first_name} {self.user.last_name}"
     
 class Child(models.Model):
     GRADE_CHOICES = [(i, str(i)) for i in range(0, 13)]
@@ -131,6 +141,8 @@ class Child(models.Model):
     school = models.CharField(max_length = 255, default = "NIS")
     grade = models.IntegerField(choices=GRADE_CHOICES)
     avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
+    xp = models.PositiveIntegerField(default=0)
+    league = models.ForeignKey(League, on_delete=models.SET_NULL, null=True, blank=True, related_name='children')
     
     def __str__(self):
         return f"[Child] {self.first_name} {self.last_name}"
