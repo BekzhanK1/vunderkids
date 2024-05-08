@@ -225,7 +225,7 @@ class ClassViewSet(viewsets.ModelViewSet):
         user = request.user
         student = get_object_or_404(Student, user=user)
         school_class = student.school_class
-        classmates = Student.objects.filter(school=student.school, school_class=school_class).exclude(user=user)
+        classmates = Student.objects.filter(school=student.school, school_class=school_class)
         serializer = StudentSerializer(classmates, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
