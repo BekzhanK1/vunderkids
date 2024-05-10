@@ -1,3 +1,4 @@
+import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser
 from django.core.validators import RegexValidator
@@ -53,6 +54,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     role = models.CharField(max_length=15, choices=ROLE_CHOICES, blank=True, null=True)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
+    activation_token = models.UUIDField(default=uuid.uuid4, editable=False, null=True, blank=True)
     
     
     USERNAME_FIELD = 'email'

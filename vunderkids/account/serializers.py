@@ -1,7 +1,11 @@
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from django.core.validators import validate_email
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.contrib.auth import get_user_model
 from account.models import *
+from .tasks import send_activation_email
+
 
 User = get_user_model()
 
@@ -43,6 +47,17 @@ class ParentRegistrationSerializer(serializers.ModelSerializer):
         model = Parent
         fields = ['email', 'password', 'first_name', 'last_name', 'phone_number']
 
+
+    def validate_email(self, value):
+        try:
+            validate_email(value)
+        except DjangoValidationError:
+            raise serializers.ValidationError("Invalid email format.")
+        
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("A user with that email already exists.")
+        return value
+
     def create(self, validated_data):
         # Create user
         user_data = {
@@ -50,11 +65,13 @@ class ParentRegistrationSerializer(serializers.ModelSerializer):
             'first_name': validated_data.pop('first_name'),
             'last_name': validated_data.pop('last_name'),
             'phone_number': validated_data.pop('phone_number'),
-            'role': 'parent'
+            'role': 'parent',
+            'is_active': False
         }
         user = User.objects.create_user(**user_data)
         user.set_password(validated_data.pop('password'))
         user.save()
+        send_activation_email.delay(user.id)
 
         # Create parent profile
         parent = Parent.objects.create(user=user, **validated_data)
@@ -78,15 +95,27 @@ class SchoolRegistrationSerializer(serializers.ModelSerializer):
         model = School
         fields = ('name', 'city', 'email', 'password', 'first_name', 'last_name', 'phone_number')
 
+
+    def validate_email(self, value):
+        try:
+            validate_email(value)
+        except DjangoValidationError:
+            raise serializers.ValidationError("Invalid email format.")
+        
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("A user with that email already exists.")
+        return value
+
     def create(self, validated_data):
         # Create user
         user_data = {
             key: validated_data.pop(key) for key in ['email', 'first_name', 'last_name', 'phone_number']
         }
         password = validated_data.pop('password')
-        user = User.objects.create_user(**user_data, role='principal')
+        user = User.objects.create_user(**user_data, role='principal', is_active=False)
         user.set_password(password)
         user.save()
+        send_activation_email.delay(user.id)
 
         # Create school associated with this user
         school = School.objects.create(user=user, **validated_data)
@@ -110,6 +139,16 @@ class TeacherRegistrationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Teacher
         fields = ('email', 'password', 'first_name', 'last_name', 'phone_number', 'subject', 'school')
+    
+    def validate_email(self, value):
+        try:
+            validate_email(value)
+        except DjangoValidationError:
+            raise serializers.ValidationError("Invalid email format.")
+        
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("A user with that email already exists.")
+        return value
 
     def create(self, validated_data):
         school = validated_data.pop('school')
@@ -150,6 +189,16 @@ class StudentRegistrationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Student
         fields = ('email', 'password', 'first_name', 'last_name', 'phone_number', 'school', 'gpa')
+
+    def validate_email(self, value):
+        try:
+            validate_email(value)
+        except DjangoValidationError:
+            raise serializers.ValidationError("Invalid email format.")
+        
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("A user with that email already exists.")
+        return value
 
     def create(self, validated_data):
         school = validated_data.pop('school')

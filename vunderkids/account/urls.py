@@ -18,4 +18,5 @@ urlpatterns = [
     path('register-teacher/', TeacherRegistrationAPIView.as_view(), name='register-teacher'),
     path('register-student/', StudentRegistrationAPIView.as_view(), name='register-student'),
     path('register-parent/', ParentRegistrationAPIView.as_view(), name='register-parent'),
+    path('activate/<uuid:token>/', ActivateAccount.as_view(), name='activate_account')
 ]

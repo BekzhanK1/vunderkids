@@ -11,29 +11,43 @@ from account.serializers import *
 from account.models import *
 from account.permissions import *
 
-class UserRegistrationAPIView(APIView):
-    def post(self, request):
-        serializer = UserRegistrationSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response({"message": "User registered successfully"}, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+# class UserRegistrationAPIView(APIView):
+#     def post(self, request):
+#         serializer = UserRegistrationSerializer(data=request.data)
+#         if serializer.is_valid():
+#             serializer.save()
+#             return Response({"message": f"User registered successfully. Please check your email to activate your account. Email: {user.email}"}, status=status.HTTP_201_CREATED)
+#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
+
+class ActivateAccount(APIView):
+    def get(self, request, token):
+        try:
+            user = User.objects.get(activation_token=token)
+            user.is_active = True
+            user.activation_token = None  # Clear token after activation
+            user.save()
+            return Response('Your account has been activated successfully!', status=status.HTTP_200_OK)
+        except User.DoesNotExist:
+            return Response('Invalid activation link!', status=status.HTTP_400_BAD_REQUEST)
+
 class ParentRegistrationAPIView(APIView):
     def post(self, request):
-        serializer = ParentRegistrationSerializer(data=request.data)
+        data = request.data
+        serializer = ParentRegistrationSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
-            return Response({"message": "Parent registered successfully"}, status=status.HTTP_201_CREATED)
+            return Response({"message": f"Activation email have been sent to {data['email']}"}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 class SchoolRegistrationAPIView(APIView):
     permission_classes = [IsSuperUser]
     def post(self, request):
+        data = request.data
         serializer = SchoolRegistrationSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
-            return Response({"message": "School registered successfully."}, status=status.HTTP_201_CREATED)
+            return Response({"message": f"Activation email have been sent to {data['email']}"}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 
@@ -135,7 +149,7 @@ class ClassViewSet(viewsets.ModelViewSet):
         self.perform_destroy(school_class)
         return Response(status=status.HTTP_204_NO_CONTENT)
     
-    @action(detail=True, methods=['patch'], url_path='assign_teacher/(?P<teacher_id>\d+)', permission_classes=[IsPrincipal])
+    @action(detail=True, methods=['patch'], url_path='assign_teacher/(?P<teacher_id>\d+)')
     def assign_teacher(self, request, pk=None, teacher_id=None):
         """Assigns a teacher to a class."""
         school_class = self.get_object()
@@ -148,7 +162,7 @@ class ClassViewSet(viewsets.ModelViewSet):
         school_class.save()
         return Response({'message': 'Teacher assigned successfully.'})
     
-    @action(detail=True, methods=['patch'], url_path='deassign_teacher', permission_classes=[IsPrincipal])
+    @action(detail=True, methods=['patch'], url_path='deassign_teacher')
     def deassign_teacher(self, request, pk=None):
         """Deassigns the teacher from a class, given the teacher's ID."""
         school_class = self.get_object()
@@ -159,7 +173,7 @@ class ClassViewSet(viewsets.ModelViewSet):
         school_class.save()
         return Response({'message': 'Teacher deassigned successfully.'})
     
-    @action(detail=True, methods=['patch'], url_path='add_student/(?P<student_id>\d+)', permission_classes=[IsTeacher])
+    @action(detail=True, methods=['patch'], url_path='add_student/(?P<student_id>\d+)')
     def add_student(self, request, pk=None, student_id=None):
         """Adds a student to a class."""
         school_class = self.get_object()
@@ -172,7 +186,7 @@ class ClassViewSet(viewsets.ModelViewSet):
         student.save()
         return Response({'message': 'Student added successfully.'})
     
-    @action(detail=True, methods=['patch'], url_path='remove_student/(?P<student_id>\d+)', permission_classes=[IsTeacher])
+    @action(detail=True, methods=['patch'], url_path='remove_student/(?P<student_id>\d+)')
     def remove_student(self, request, pk=None, student_id=None):
         """Removes a student from a class, given the student's ID."""
         school_class = self.get_object()
@@ -189,7 +203,7 @@ class ClassViewSet(viewsets.ModelViewSet):
         """
         school_class = self.get_object()
         
-        students = Student.objects.filter(school_class=school_class)
+        students = Student.objects.filter(school_class=school_class).order_by('-xp').values()
         serializer = StudentSerializer(students, many=True)
         
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -225,7 +239,7 @@ class ClassViewSet(viewsets.ModelViewSet):
         user = request.user
         student = get_object_or_404(Student, user=user)
         school_class = student.school_class
-        classmates = Student.objects.filter(school=student.school, school_class=school_class)
+        classmates = Student.objects.filter(school=student.school, school_class=school_class).order_by('-xp')
         serializer = StudentSerializer(classmates, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
