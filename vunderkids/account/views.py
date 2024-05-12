@@ -7,9 +7,12 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.decorators import action
 from django.shortcuts import get_object_or_404
+from django.contrib.auth import authenticate
 from account.serializers import *
 from account.models import *
 from account.permissions import *
+from .tasks import send_password_reset_request_email
+import uuid
 
 # class UserRegistrationAPIView(APIView):
 #     def post(self, request):
@@ -30,6 +33,59 @@ class ActivateAccount(APIView):
             return Response('Your account has been activated successfully!', status=status.HTTP_200_OK)
         except User.DoesNotExist:
             return Response('Invalid activation link!', status=status.HTTP_400_BAD_REQUEST)
+        
+
+class ChangePassword(APIView):
+    permission_classes = [IsAuthenticated]
+    def post(self, request):
+        user = request.user
+        data = request.data
+        current_password = data['current_password']
+        new_password = data['new_password']
+        auth_user = authenticate(email=user.email, password=current_password)
+        if auth_user:
+            try:
+                auth_user.set_password(new_password)
+                auth_user.save()
+            except Exception("Couldn't change password"):
+                return Response({"message": "Error during password change"}, status=status.HTTP_400_BAD_REQUEST)
+        else: 
+            return Response({"message": "Current password is incorrect"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"message": "Successfully changed password"}, status=status.HTTP_200_OK)
+    
+
+
+class RequestResetPassword(APIView):
+    def post(self, request):
+        data = request.data
+        if 'email' in data:
+            email = data['email']
+            user = get_object_or_404(User, email=email)
+            user.activation_token = uuid.uuid4()
+            user.save()
+            send_password_reset_request_email.delay(user.pk)
+            return Response({"message": "Request has been sent to email"}, status=status.HTTP_201_CREATED)
+        else:
+            return Response({"message": "You need to enter the email to reset password"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        
+    
+class ResetPassword(APIView):
+    def post(self, request, token):
+        try:
+            data = request.data
+            password = data['password']
+            user = User.objects.get(activation_token=token)
+            user.set_password(password)
+            user.save()
+            return Response({"message": "Successfully resseted password"}, status=status.HTTP_200_OK)
+        except User.DoesNotExist:
+            return Response('Invalid reset link!', status=status.HTTP_400_BAD_REQUEST)
+
+
+
+
+
 
 class ParentRegistrationAPIView(APIView):
     def post(self, request):
@@ -306,6 +362,9 @@ class ChildrenViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         data = request.data
         parent = Parent.objects.get(user = request.user)
+        print("Hello")
+        if Child.objects.filter(parent = parent).count() >= 3:
+            return Response({"message": "You cannot register more than 3 children"})
         data['parent'] = parent.pk
         serializer = self.serializer_class(data = data)
         if serializer.is_valid():
@@ -330,6 +389,43 @@ class ChildrenViewSet(viewsets.ModelViewSet):
         child = get_object_or_404(queryset, pk = kwargs['pk'])
         self.perform_destroy(child)
         return Response(status=status.HTTP_204_NO_CONTENT)
+    
+
+class StudentRatingViewSet(viewsets.ViewSet):
+    serializer_class = StudentSerializer
+
+    def get_queryset(self):
+        return Student.objects.select_related('user', 'school').all().order_by('-xp')
+
+    @action(detail=False, methods=['get'], url_path='global')
+    def global_rating(self, request):
+        serializer = self.serializer_class(self.get_queryset(), many=True)
+        return Response(serializer.data)
+    
+    @action(detail=False, methods=['get'], url_path='school')
+    def school_rating(self, request):
+        user_student = get_object_or_404(Student, user=request.user)
+        students = self.get_queryset().filter(school=user_student.school)
+        serializer = self.serializer_class(students, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=False, methods=['get'], url_path='grade')
+    def grade_rating(self, request):
+        user_student = get_object_or_404(Student, user=request.user)
+        if not user_student.school_class:
+            return Response({"error": "User does not belong to any class."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        students = self.get_queryset().filter(school_class__grade=user_student.school_class.grade, school=user_student.school)
+        serializer = self.serializer_class(students, many=True)
+        return Response(serializer.data)
+        
+    
+    
+        
+        
+
+        
+
        
     
         

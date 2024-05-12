@@ -25,11 +25,11 @@ def debug_task(self):
 app.conf.beat_schedule = {
     'send_daily_email_to_all_students': {
         'task': 'account.tasks.send_daily_email_to_all_students',
-        'schedule': crontab(hour=12, minute=38),  # Executes every day at 8:00 AM
+        'schedule': crontab(hour=21, minute=50),  # Executes every day at 8:00 AM
     },
     'send_daily_email_to_all_parents': {
         'task': 'account.tasks.send_daily_email_to_all_parents',
-        'schedule': crontab(hour=12, minute=20),  # Executes every day at 8:00 AM
+        'schedule': crontab(hour=21, minute=51),  # Executes every day at 8:00 AM
     },
 }
 

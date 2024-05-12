@@ -1,11 +1,13 @@
 from celery import shared_task
 from django.core.mail import EmailMultiAlternatives
 from django.conf import settings
-from account.models import Student, Parent, Child
+from account.models import Student, Parent, User
 from account.utils import render_email
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from django.core.mail import send_mail
+from django.shortcuts import get_object_or_404
+from .utils import generate_password
 
 
 @shared_task
@@ -49,7 +51,7 @@ def send_daily_email_to_all_parents():
 
 @shared_task
 def send_activation_email(user_id):
-    from .models import User
+
     user = User.objects.get(pk=user_id)
     activation_url = f"http://127.0.0.1:8000/api/activate/{user.activation_token}/"
     
@@ -65,4 +67,27 @@ def send_activation_email(user_id):
     to = user.email
 
     send_mail(subject, plain_message, from_email, [to], html_message=html_message)
+
+
+
+@shared_task
+def send_password_reset_request_email(user_id):
+    user = User.objects.get(pk=user_id)
+    reset_password_url = f"http://127.0.0.1:8000/api/reset-password/{user.activation_token}"
+
+    context = {
+        'user': user,
+        'reset_password_url': reset_password_url
+    }
+
+    subject = 'Password reset Vunderkids account'
+    html_message = render_to_string('password_reset_request_email.html', context)
+    plain_message = strip_tags(html_message)
+    from_email = settings.DEFAULT_FROM_EMAIL
+    to = user.email
+
+    send_mail(subject, plain_message, from_email, [to], html_message=html_message)
+
+
+
 

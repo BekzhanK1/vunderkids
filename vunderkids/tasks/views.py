@@ -87,10 +87,5 @@ class TaskViewSet(viewsets.ModelViewSet):
 
 
 
-class TestingView(APIView):
-    def get(self, request):
-        from vunderkids.account.tasks import add    
-        return Response({"message": f"{add.delay(10, 5)}"})
-
 
 
