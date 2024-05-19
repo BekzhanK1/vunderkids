@@ -17,5 +17,3 @@ def generate_password():
     password_length = 8
     return secrets.token_urlsafe(password_length)
 
-
-print(generate_password())

@@ -1,7 +1,41 @@
+<!DOCTYPE html>
 <html>
+<head>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        .email-container {
+            background-color: #ffffff;
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        a {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+        p {
+            color: #333;
+        }
+    </style>
+</head>
 <body>
-    <p>Hello {{ user.first_name }},</p>
-    <p>Thank you for registering with Vunderkids. Please click the link below to activate your account:</p>
-    <p><a href="{{ activation_url }}">Activate your account</a></p>
+    <div class="email-container">
+        <p>Hello {{ user.first_name }},</p>
+        <p>Thank you for registering with Vunderkids. Please click the link below to activate your account:</p>
+        <p style="text-align: center; margin: 20px 0;">
+            <a href="{{ activation_url }}">Activate your account</a>
+        </p>
+        <p>Your password: <strong>{{ password }}</strong></p>
+    </div>
 </body>
 </html>

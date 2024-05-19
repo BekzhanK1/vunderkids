@@ -9,11 +9,9 @@ from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404
 from .utils import generate_password
 
-
 @shared_task
 def send_daily_email_to_all_students():
     students = Student.objects.all()
-
     for student in students:
         html_content, text_content = render_email(student.user.first_name, student.user.last_name, student.xp)
         msg = EmailMultiAlternatives(
@@ -24,8 +22,6 @@ def send_daily_email_to_all_students():
         )
         msg.attach_alternative(html_content, "text/html")
         msg.send()
-
-
 
 @shared_task
 def send_daily_email_to_all_parents():
@@ -48,46 +44,26 @@ def send_daily_email_to_all_parents():
             msg.attach_alternative(html_content, "text/html")
             msg.send()
 
-
 @shared_task
-def send_activation_email(user_id):
-
+def send_activation_email(user_id, password):
     user = User.objects.get(pk=user_id)
     activation_url = f"http://127.0.0.1:8000/api/activate/{user.activation_token}/"
-    
-    context = {
-        'user': user,
-        'activation_url': activation_url,
-    }
-
+    context = {'user': user, 'activation_url': activation_url, 'password': password}
     subject = 'Activate your Vunderkids Account'
     html_message = render_to_string('activation_email.html', context)
     plain_message = strip_tags(html_message)
     from_email = settings.DEFAULT_FROM_EMAIL
     to = user.email
-
     send_mail(subject, plain_message, from_email, [to], html_message=html_message)
-
-
 
 @shared_task
 def send_password_reset_request_email(user_id):
     user = User.objects.get(pk=user_id)
-    reset_password_url = f"http://127.0.0.1:8000/api/reset-password/{user.activation_token}"
-
-    context = {
-        'user': user,
-        'reset_password_url': reset_password_url
-    }
-
+    reset_password_url = f"http://127.0.0.1:8000/api/reset-password/{user.activation_token}/"
+    context = {'user': user, 'reset_password_url': reset_password_url}
     subject = 'Password reset Vunderkids account'
     html_message = render_to_string('password_reset_request_email.html', context)
     plain_message = strip_tags(html_message)
     from_email = settings.DEFAULT_FROM_EMAIL
     to = user.email
-
     send_mail(subject, plain_message, from_email, [to], html_message=html_message)
-
-
-
-

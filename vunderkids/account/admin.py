@@ -5,7 +5,6 @@ from account.models import *
 admin.site.register(User)
 admin.site.register(Child)
 admin.site.register(Parent)
-admin.site.register(Teacher)
 admin.site.register(School)
 admin.site.register(Student)
 admin.site.register(Class)
