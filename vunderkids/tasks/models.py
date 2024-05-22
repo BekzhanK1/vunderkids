@@ -1,89 +1,89 @@
 from django.db import models
+from django.contrib.auth import get_user_model
+from account.models import Child
 
-class League(models.Model):
-    name = models.CharField(max_length=100)
-    min_xp = models.PositiveIntegerField()
-    max_xp = models.PositiveIntegerField()  # Add this to handle upper limits
+User = get_user_model()
+
+class Course(models.Model):
+    name = models.CharField(max_length=255)
+    description = models.TextField()
+    grade = models.IntegerField()
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE)
 
     def __str__(self):
-        return f"{self.name} | XP Range: {self.min_xp}-{self.max_xp}"
-    
+        return self.name
 
-from django.db import models
-import json
+class Section(models.Model):
+    course = models.ForeignKey(Course, related_name='sections', on_delete=models.CASCADE)
+    title = models.CharField(max_length=255)
+    description = models.TextField()
+
+    def __str__(self):
+        return self.title
+
+
+class Lesson(models.Model):
+    title = models.CharField(max_length=255)
+    description = models.TextField()
+    section = models.ForeignKey(Section, related_name='lessons', on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f"[Section {self.section}] {self.title}"
+class Content(models.Model):
+    CONTENT_TYPE_CHOICES = [
+        ('video', 'Video'),
+        ('text', 'Text'),
+        ('file', 'File'),
+    ]
+    lesson = models.ForeignKey(Lesson, related_name='contents', on_delete=models.CASCADE)
+    content_type = models.CharField(max_length=10, choices=CONTENT_TYPE_CHOICES)
+    content = models.TextField()
+    file = models.FileField(blank=True, null=True, upload_to='files/')
+
+    def __str__(self):
+        return f'{self.content_type}: {self.content[:30]}'
 
 class Task(models.Model):
-    TASK_TYPES = [
-        ('MCQ', 'Multiple-Choice Questions'),
-        ('DD', 'Drag and Drop'),
-        ('FIB', 'Fill-in-the-Blanks'),
-        ('TF', 'True or False'),
-        ('SA', 'Short Answer'),
-        ('SO', 'Sorting and Ordering'),
-    ]
-
-
-    XP_CHOICES = [
-        (10, '10 XP'),
-        (20, '20 XP'),
-        (30, '30 XP'),
-        (40, '40 XP'),
-        (50, '50 XP'),
-    ]
-
+    section = models.ForeignKey(Section, related_name='tasks', on_delete=models.CASCADE)
     title = models.CharField(max_length=255)
-    task_type = models.CharField(max_length=3, choices=TASK_TYPES)
     description = models.TextField()
-    xp_reward = models.PositiveIntegerField(choices=XP_CHOICES)
-    data = models.TextField(help_text="Stores task-specific data in JSON format")
 
     def __str__(self):
-        return f"{self.title} ({self.get_task_type_display()})"
+        return self.title
 
-    def save(self, *args, **kwargs):
-        if isinstance(self.data, dict):
-            self.data = json.dumps(self.data)
-        super().save(*args, **kwargs)
+class Question(models.Model):
+    task = models.ForeignKey(Task, related_name='questions', on_delete=models.CASCADE)
+    question_text = models.TextField()
+    question_type = models.CharField(max_length=50, choices=[
+        ('multiple_choice', 'Multiple Choice'),
+        ('drag_and_drop', 'Drag and Drop'),
+        ('true_false', 'True or False'),
+    ])
+    options = models.JSONField(blank=True, null=True)
+    correct_answer = models.TextField()
 
-    @property
-    def data_dict(self):
-        return json.loads(self.data)
-    
+    def __str__(self):
+        return f"[Task: {self.task}] {self.question_text}"
 
 
-
-    
-
-class TaskResponse(models.Model):
-    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='responses')
-    student = models.ForeignKey('account.Student', on_delete=models.CASCADE, related_name='task_responses', null=True, blank=True)
-    child = models.ForeignKey('account.Child', on_delete=models.CASCADE, related_name='task_responses', null=True, blank=True)
+class Answer(models.Model):
+    user = models.ForeignKey(User, null=True, blank=True, related_name='answers', on_delete=models.CASCADE)
+    child = models.ForeignKey(Child, null=True, blank=True, related_name='answers', on_delete=models.CASCADE)
+    question = models.ForeignKey(Question, related_name='answers', on_delete=models.CASCADE)
     answer = models.TextField()
-    response_date = models.DateTimeField(auto_now_add=True)
-    is_true = models.BooleanField(blank=True, null=True, default=None)
+    is_correct = models.BooleanField()
 
+    def __str__(self):
+        return f"{self.user} - {self.question}"
 
-    def __str__(self) -> str:
-        return f"Task: {self.task.pk} Answer: {self.is_true}"
+class TaskCompletion(models.Model):
+    user = models.ForeignKey(User, null=True, blank=True, related_name='completed_tasks', on_delete=models.CASCADE)
+    child = models.ForeignKey(Child, null=True, blank=True, related_name='completed_tasks', on_delete=models.CASCADE)
+    task = models.ForeignKey(Task, related_name='completed_by', on_delete=models.CASCADE)
+    completed_at = models.DateTimeField(auto_now_add=True)
 
-
-
-    def is_correct(self):
-        task_data = self.task.data_dict
-        if self.task.task_type == 'MCQ':
-            return self.answer == task_data['answer']
-        elif self.task.task_type == 'TF':
-            return str(task_data['answer']).lower() == self.answer.lower()
-        elif self.task.task_type in ['DD', 'SO']:
-            return json.loads(self.answer) == task_data['correct_order']
-        elif self.task.task_type == 'FIB':
-            user_answers = json.loads(self.answer)
-            return all(user_answers.get(str(key)) == val for key, val in task_data['blanks'].items())
-        elif self.task.task_type == 'SA':
-            return self.answer.strip().lower() == task_data['answer'].strip().lower()
-        return False
-
-    @property
-    def user_type(self):
-        return 'Student' if self.student else 'Child'
-
+    def __str__(self):
+        if self.user:
+            return f"{self.user} - {self.task}"
+        if self.child:
+            return f"{self.child} - {self.task}"

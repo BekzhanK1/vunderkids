@@ -22,14 +22,18 @@ def debug_task(self):
 
 # celery.py or where you configure Celery
 
-# app.conf.beat_schedule = {
-#     'send_daily_email_to_all_students': {
-#         'task': 'account.tasks.send_daily_email_to_all_students',
-#         'schedule': crontab(hour=21, minute=50),  # Executes every day at 8:00 AM
-#     },
-#     'send_daily_email_to_all_parents': {
-#         'task': 'account.tasks.send_daily_email_to_all_parents',
-#         'schedule': crontab(hour=21, minute=51),  # Executes every day at 8:00 AM
-#     },
-# }
+app.conf.beat_schedule = {
+    'send_daily_email_to_all_students': {
+        'task': 'account.tasks.send_daily_email_to_all_students',
+        'schedule': crontab(hour=12, minute=15),  
+    },
+    'send_daily_email_to_all_parents': {
+        'task': 'account.tasks.send_daily_email_to_all_parents',
+        'schedule': crontab(hour=21, minute=51),
+    },
+    'check-streaks-every-night': {
+        'task': 'account.tasks.check_streaks',
+        'schedule': crontab(hour=12, minute=36),
+    },
+}
 

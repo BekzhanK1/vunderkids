@@ -7,13 +7,14 @@ from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from .utils import generate_password
 
 @shared_task
 def send_daily_email_to_all_students():
     students = Student.objects.all()
     for student in students:
-        html_content, text_content = render_email(student.user.first_name, student.user.last_name, student.xp)
+        html_content, text_content = render_email(student.user.first_name, student.user.last_name, student.cups, student.level)
         msg = EmailMultiAlternatives(
             subject='Daily Update',
             body=text_content,
@@ -67,3 +68,13 @@ def send_password_reset_request_email(user_id):
     from_email = settings.DEFAULT_FROM_EMAIL
     to = user.email
     send_mail(subject, plain_message, from_email, [to], html_message=html_message)
+
+@shared_task
+def check_streaks():
+    now = timezone.now()
+    students = Student.objects.all()
+    for student in students:
+        if student.last_task_completed_at:
+            if now.date() != student.last_task_completed_at.date():
+                student.streak = 0
+                student.save()

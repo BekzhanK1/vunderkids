@@ -71,9 +71,10 @@ class ParentRegistrationSerializer(serializers.ModelSerializer):
             'is_active': False
         }
         user = User.objects.create_user(**user_data)
-        user.set_password(validated_data.pop('password'))
+        password = validated_data.pop('password')
+        user.set_password(password)
         user.save()
-        send_activation_email.delay(user.id)
+        send_activation_email.delay(user.id, password)
 
         # Create parent profile
         parent = Parent.objects.create(user=user, **validated_data)
@@ -103,11 +104,12 @@ class StudentRegistrationSerializer(serializers.ModelSerializer):
     last_name = serializers.CharField(max_length=150)
     phone_number = serializers.CharField(max_length=17, required=False, allow_blank=True)
     school = serializers.PrimaryKeyRelatedField(queryset=School.objects.all(), write_only=True)
+    grade = serializers.IntegerField()
     school_class = serializers.PrimaryKeyRelatedField(queryset=Class.objects.all(), write_only=True)
     
     class Meta:
         model = Student
-        fields = ('email', 'first_name', 'last_name', 'phone_number', 'school', 'school_class')
+        fields = ('email', 'first_name', 'last_name', 'phone_number', 'school', 'school_class', 'grade')
 
     def validate_email(self, value):
         try:
@@ -122,6 +124,7 @@ class StudentRegistrationSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         school = validated_data.pop('school')
         school_class = validated_data.pop('school_class')
+        grade = validated_data.pop('grade')
         # Create user
         user_data = {
             key: validated_data.pop(key) for key in ['email', 'first_name', 'last_name', 'phone_number']
@@ -133,7 +136,7 @@ class StudentRegistrationSerializer(serializers.ModelSerializer):
         send_activation_email.delay(user.id, password)
 
         # Create student associated with this user
-        student = Student.objects.create(user=user, school = school, school_class = school_class, **validated_data)
+        student = Student.objects.create(user=user, school = school, school_class = school_class, grade = grade, **validated_data)
         return student
     
 class StudentSerializer(serializers.ModelSerializer):
@@ -160,21 +163,45 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         data = super().validate(attrs)
 
         if self.user.is_student:
-            entity_id = Student.objects.get(user=self.user).pk
-        elif self.user.is_parent:
-            entity_id = Parent.objects.get(user=self.user).pk
-        elif self.user.is_staff:
-            entity_id = None
+            student = Student.objects.get(user=self.user)
+            grade = student.grade
+            data['user'] = {
+                'user_id': self.user.id,
+                'email': self.user.email,
+                'first_name': self.user.first_name,
+                'last_name': self.user.last_name,
+                'role': self.user.role,
+                'grade': grade,
+                'level': student.level,
+                'streak': student.streak,
+                'cups': student.cups,
+                'stars': student.stars,
+                'is_superuser': self.user.is_superuser,
+                'is_staff': self.user.is_staff
 
-        data['user'] = {
-            'user_id': self.user.id,
-            'email': self.user.email,
-            'first_name': self.user.first_name,
-            'last_name': self.user.last_name,
-            'role': self.user.role,
-            'entity_id': entity_id,
-            'is_superuser': self.user.is_superuser,
-            'is_staff': self.user.is_staff
-        }
+            }
+        elif self.user.is_parent:
+            parent = self.user.parent
+            children = Child.objects.filter(parent = parent)
+            data['user'] = {
+                'user_id': self.user.id,
+                'email': self.user.email,
+                'first_name': self.user.first_name,
+                'last_name': self.user.last_name,
+                'role': self.user.role,
+                'children': ChildSerializer(children, many=True).data,
+                'is_superuser': self.user.is_superuser,
+                'is_staff': self.user.is_staff
+            }
+        else:
+            data['user'] = {
+                'user_id': self.user.id,
+                'email': self.user.email,
+                'first_name': self.user.first_name,
+                'last_name': self.user.last_name,
+                'role': self.user.role,
+                'is_superuser': self.user.is_superuser,
+                'is_staff': self.user.is_staff
+            }
 
         return data

@@ -136,9 +136,11 @@ class StudentViewSet(viewsets.ModelViewSet):
     def register_student(self, request, *args, **kwargs):
         school_id = self.kwargs['school_pk']
         class_id = self.kwargs['class_pk']
+        school_class = get_object_or_404(Class, pk = class_id)
         data = request.data.copy()
         data['school'] = school_id
         data['school_class'] = class_id
+        data['grade'] = school_class.grade
 
         serializer = StudentRegistrationSerializer(data=data)
         if serializer.is_valid():
@@ -156,9 +158,91 @@ class ChildrenViewSet(viewsets.ModelViewSet):
     serializer_class = ChildSerializer
     permission_classes = [IsParent]
 
+
+    def create(self, request):
+        parent = request.user.parent
+        data = request.data
+        data['parent'] = parent
+        serializer = self.serializer_class(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"message": "Child added successfully"}, status=status.HTTP_201_CREATED)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
     def get_queryset(self):
-        parent = Parent.objects.get(user=self.request.user)
+        print(self.request.user.parent)
+        parent = self.request.user.parent
         return Child.objects.filter(parent=parent)
+    
+
+
+class TopStudentsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, rating_type):
+        user = request.user
+        child_id = request.query_params.get('child_id', None)
+        top_students = []
+        current_student = None
+        top_children = []
+        current_child = None
+
+        if user.is_student:
+            current_student = user.student
+            if rating_type == 'class':
+                if current_student.school_class:
+                    top_students = Student.objects.filter(school_class=current_student.school_class).order_by('-cups')[:10]
+                else:
+                    return Response({"detail": "Student is not assigned to any class."}, status=400)
+            
+            elif rating_type == 'school':
+                if current_student.school:
+                    top_students = Student.objects.filter(school=current_student.school).order_by('-cups')[:10]
+                else:
+                    return Response({"detail": "Student is not assigned to any school."}, status=400)
+            
+            elif rating_type == 'global':
+                if current_student.grade:
+                    top_students = Student.objects.filter(grade=current_student.grade).order_by('-cups')[:10]
+                else:
+                    return Response({"detail": "Student grade is not set."}, status=400)
+            else:
+                return Response({"detail": "Invalid rating type. Use 'class', 'school', or 'global'."}, status=400)
+
+            # Check if current student is in the top_students, otherwise add them
+            if current_student not in top_students:
+                top_students = list(top_students)
+                top_students.append(current_student)
+                top_students.sort(key=lambda student: student.cups, reverse=True)
+                top_students = top_students[:10]
+
+            serializer = StudentSerializer(top_students, many=True, context={'request': request})
+            return Response(serializer.data, status=200)
+
+        elif user.is_parent and child_id:
+            current_child = get_object_or_404(Child, parent=user.parent, pk=child_id)
+            if rating_type == 'class' or rating_type == 'school' or rating_type == 'global':
+                if current_child.grade:
+                    top_children = Child.objects.filter(grade=current_child.grade).order_by('-cups')[:10]
+                else:
+                    return Response({"detail": "Child is not assigned to any grade."}, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                return Response({"detail": "Invalid rating type. Use 'global'."}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Check if current child is in the top_children, otherwise add them
+            if current_child not in top_children:
+                top_children = list(top_children)
+                top_children.append(current_child)
+                top_children.sort(key=lambda child: child.cups, reverse=True)
+                top_children = top_children[:10]
+
+            serializer = ChildSerializer(top_children, many=True, context={'request': request})
+            return Response(serializer.data, status=200)
+        
+        return Response({"detail": "Invalid request. Parent must provide child_id."}, status=400)
+
+        
 
 class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = MyTokenObtainPairSerializer
@@ -167,5 +251,47 @@ class CurrentUserView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        serializer = UserSerializer(request.user)
-        return Response(serializer.data)
+        data = {}
+        if request.user.is_student:
+            student = Student.objects.get(user=request.user)
+            grade = student.grade
+            data['user'] = {
+                'user_id': request.user.id,
+                'email': request.user.email,
+                'first_name': request.user.first_name,
+                'last_name': request.user.last_name,
+                'role': request.user.role,
+                'grade': grade,
+                'level': student.level,
+                'streak': student.streak,
+                'cups': student.cups,
+                'stars': student.stars,
+                'is_superuser': request.user.is_superuser,
+                'is_staff': request.user.is_staff
+
+            }
+        elif request.user.is_parent:
+            parent = request.user.parent
+            children = Child.objects.filter(parent = parent)
+            data['user'] = {
+                'user_id': request.user.id,
+                'email': request.user.email,
+                'first_name': request.user.first_name,
+                'last_name': request.user.last_name,
+                'role': request.user.role,
+                'children': ChildSerializer(children, many=True).data,
+                'is_superuser': request.user.is_superuser,
+                'is_staff': request.user.is_staff
+            }
+        else:
+            data['user'] = {
+                'user_id': request.user.id,
+                'email': request.user.email,
+                'first_name': request.user.first_name,
+                'last_name': request.user.last_name,
+                'role': request.user.role,
+                'is_superuser': request.user.is_superuser,
+                'is_staff': request.user.is_staff
+            }
+
+        return Response(data)

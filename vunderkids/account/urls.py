@@ -35,4 +35,5 @@ urlpatterns = [
     path('change-password/', ChangePassword.as_view(), name='change-password'),
     path('reset-password/', RequestResetPassword.as_view(), name='request-reset-password'),
     path('reset-password/<uuid:token>/', ResetPassword.as_view(), name='reset-password'),
+    path('rating/<str:rating_type>/', TopStudentsView.as_view(), name='top_students'),
 ]

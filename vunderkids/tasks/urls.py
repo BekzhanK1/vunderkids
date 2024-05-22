@@ -1,11 +1,21 @@
-from django.urls import path, include
-from .views import TaskViewSet
-from rest_framework.routers import DefaultRouter
+from rest_framework_nested import routers
+from .views import CourseViewSet, SectionViewSet, LessonViewSet, ContentViewSet, TaskViewSet, QuestionViewSet
 
-router = DefaultRouter()
-router.register(r'tasks', TaskViewSet)
+router = routers.DefaultRouter()
+router.register(r'courses', CourseViewSet)
 
-urlpatterns = [
-    path('', include(router.urls)),
+courses_router = routers.NestedSimpleRouter(router, r'courses', lookup='course')
+courses_router.register(r'sections', SectionViewSet, basename='course-sections')
 
-]
+sections_router = routers.NestedSimpleRouter(courses_router, r'sections', lookup='section')
+sections_router.register(r'lessons', LessonViewSet, basename='section-lessons')
+sections_router.register(r'tasks', TaskViewSet, basename='section-tasks')
+
+lessons_router = routers.NestedSimpleRouter(sections_router, r'lessons', lookup='lesson')
+lessons_router.register(r'contents', ContentViewSet, basename='lesson-contents')
+
+tasks_router = routers.NestedSimpleRouter(sections_router, r'tasks', lookup='task')
+tasks_router.register(r'questions', QuestionViewSet, basename='task-questions')
+
+urlpatterns = router.urls + courses_router.urls + sections_router.urls + lessons_router.urls + tasks_router.urls
+

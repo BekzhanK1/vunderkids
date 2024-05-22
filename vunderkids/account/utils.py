@@ -2,11 +2,12 @@ from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 import secrets
 
-def render_email(first_name, last_name, current_xp):
+def render_email(first_name, last_name, current_cups, level):
     context = {
         'first_name': first_name,
         'last_name': last_name,
-        'current_xp': current_xp
+        'current_cups': current_cups,
+        'level': level
     }
     html_content = render_to_string('daily_email.html', context)
     text_content = strip_tags(html_content)

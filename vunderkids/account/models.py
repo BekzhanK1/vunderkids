@@ -1,3 +1,5 @@
+from datetime import timedelta
+from django.utils import timezone
 import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
@@ -59,7 +61,7 @@ class School(models.Model):
     city = models.CharField(max_length=150)
 
     def __str__(self):
-        return f"{self.name} + {self.city}"
+        return f"{self.name} ({self.city})"
 
 class Class(models.Model):
     GRADE_CHOICES = [(i, str(i)) for i in range(0, 13)]
@@ -71,17 +73,53 @@ class Class(models.Model):
 
     def __str__(self):
         return f"{self.grade}{self.section}"
+    
+
+class LevelRequirement(models.Model):
+    level = models.PositiveIntegerField(unique=True)
+    cups_required = models.PositiveIntegerField()
+
+    def __str__(self):
+        return f'Level {self.level}: {self.cups_required} cups'
 
 class Student(models.Model):
+    GRADE_CHOICES = [(i, str(i)) for i in range(0, 13)]
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='student')
     school_class = models.ForeignKey(Class, on_delete=models.SET_NULL, null=True, blank=True, related_name='students')
     school = models.ForeignKey(School, on_delete=models.SET_NULL, null=True, blank=True, related_name='students')
+    grade = models.IntegerField(choices=GRADE_CHOICES)
+    level = models.PositiveIntegerField(default=1)
+    streak = models.PositiveIntegerField(default=0)
     cups = models.PositiveIntegerField(default=0)
     stars = models.PositiveIntegerField(default=0)
+    last_task_completed_at = models.DateTimeField(null=True, blank = True)
 
     def __str__(self):
         return f"[Student] {self.user.first_name} {self.user.last_name}"
+    
+    def update_level(self):
+        level_requirements = LevelRequirement.objects.order_by('level')
+        for requirement in level_requirements:
+            if self.cups >= requirement.cups_required:
+                self.level = requirement.level
+            else:
+                break
+        self.save()
 
+    def update_streak(self):
+        now = timezone.now()
+        if self.last_task_completed_at:
+            if now.date() == self.last_task_completed_at.date():
+                return
+            elif now.date() == (self.last_task_completed_at + timedelta(days=1)).date():
+                self.streak += 1
+            else:
+                self.streak = 0
+        else:
+            self.streak = 1
+        self.last_task_completed_at = now
+        self.save()
+            
 class Parent(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='parent')
 
@@ -90,7 +128,7 @@ class Parent(models.Model):
 
 class Child(models.Model):
     GRADE_CHOICES = [(i, str(i)) for i in range(0, 13)]
-    parent = models.ForeignKey(User, on_delete=models.CASCADE, related_name='children')
+    parent = models.ForeignKey(Parent, on_delete=models.CASCADE, related_name='children')
     first_name = models.CharField(max_length=30)
     last_name = models.CharField(max_length=150)
     school = models.CharField(max_length=255, default="NIS")
@@ -98,6 +136,32 @@ class Child(models.Model):
     avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
     cups = models.PositiveIntegerField(default=0)
     stars = models.PositiveIntegerField(default=0)
+    level = models.PositiveIntegerField(default=1)
+    streak = models.PositiveIntegerField(default=0)
+    last_task_completed_at = models.DateTimeField(null=True, blank = True)
+
+    def update_level(self):
+        level_requirements = LevelRequirement.objects.order_by('level')
+        for requirement in level_requirements:
+            if self.cups >= requirement.cups_required:
+                self.level = requirement.level
+            else:
+                break
+        self.save()
+
+    def update_streak(self):
+        now = timezone.now()
+        if self.last_task_completed_at:
+            if now.date() == self.last_task_completed_at.date():
+                return
+            elif now.date() == (self.last_task_completed_at + timedelta(days=1)).date():
+                self.streak += 1
+            else:
+                self.streak = 0
+        else:
+            self.streak = 1
+        self.last_task_completed_at = now
+        self.save()
 
     def __str__(self):
         return f"[Child] {self.first_name} {self.last_name}"
