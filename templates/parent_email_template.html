@@ -1,0 +1,44 @@
+<!-- templates/parent_email_template.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: 'Arial', sans-serif; background-color: #f4f4f9; margin: 0; padding: 20px; }
+        .container { background-color: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 20px; max-width: 600px; margin: 0 auto; }
+        h1 { color: #4A90E2; }
+        p { font-size: 16px; line-height: 1.5; }
+        .footer { text-align: center; margin-top: 20px; font-size: 14px; color: #999; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Hello {{ first_name }} {{ last_name }},</h1>
+        <p>Here is your daily update from Vunderkids:</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Child's Name</th>
+                    <th>Current XP</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for child in children %}
+                <tr>
+                    <td>{{ child.first_name }} {{ child.last_name }}</td>
+                    <td>{{ child.xp }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <p>Keep encouraging your children to achieve more!</p>
+        <div class="footer">
+            <p>Have a great day!</p>
+            <p>Vunderkids Team</p>
+        </div>
+    </div>
+</body>
+</html>
