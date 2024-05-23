@@ -85,7 +85,7 @@ class ParentRegistrationAPIView(APIView):
         serializer = ParentRegistrationSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
-            return Response({"message": f"Activation email have been sent to {data['email']}"}, status=status.HTTP_201_CREATED)
+            return Response({"message": f"Вам было отправлено письмо активаций по адресу {data['email']}"}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class SchoolRegistrationAPIView(APIView):
@@ -132,8 +132,7 @@ class StudentViewSet(viewsets.ModelViewSet):
         return Student.objects.filter(school_class_id=self.kwargs['class_pk'])
     
 
-    @action(detail=False, methods=['post'], url_path='register_student')
-    def register_student(self, request, *args, **kwargs):
+    def create(self, request, *args, **kwargs):
         school_id = self.kwargs['school_pk']
         class_id = self.kwargs['class_pk']
         school_class = get_object_or_404(Class, pk = class_id)
@@ -162,7 +161,7 @@ class ChildrenViewSet(viewsets.ModelViewSet):
     def create(self, request):
         parent = request.user.parent
         data = request.data
-        data['parent'] = parent
+        data['parent'] = parent.pk
         serializer = self.serializer_class(data=data)
         if serializer.is_valid():
             serializer.save()
