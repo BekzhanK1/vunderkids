@@ -11,7 +11,7 @@ class Course(models.Model):
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
 
     def __str__(self):
-        return self.name
+        return f"{self.name} ({self.grade} Класс)"
 
 class Section(models.Model):
     course = models.ForeignKey(Course, related_name='sections', on_delete=models.CASCADE)

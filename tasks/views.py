@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from django.conf import settings
 from account.permissions import *
 from account.models import Student, Child
 from .models import Answer, Course, Section, Lesson, Content, Task, Question, TaskCompletion
@@ -194,10 +195,6 @@ class QuestionViewSet(viewsets.ModelViewSet):
                 entity = child
 
             if is_correct:
-                entity.cups += 10
-                entity.stars += 10
-                entity.save()
-                entity.update_level()
 
                 task = question.task
                 questions = task.questions.all()
@@ -207,6 +204,11 @@ class QuestionViewSet(viewsets.ModelViewSet):
                     answered_questions = Answer.objects.filter(child=child, question__in=questions, is_correct=True).count()
 
                 if answered_questions == questions.count():
+                    task_reward = settings.TASK_REWARD
+                    entity.cups += task_reward
+                    entity.stars += task_reward
+                    entity.save()
+                    entity.update_level()
                     TaskCompletion.objects.create(user=user, task=task) if user.is_student else TaskCompletion.objects.create(child=child, task=task)
                     entity.update_streak()
                     return Response({"message": "Correct answer! Task completed. Cups and stars updated.", "is_correct": True}, status=status.HTTP_200_OK)

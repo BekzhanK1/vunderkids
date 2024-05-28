@@ -29,11 +29,11 @@ app.conf.beat_schedule = {
     },
     'send_daily_email_to_all_parents': {
         'task': 'account.tasks.send_daily_email_to_all_parents',
-        'schedule': crontab(hour=21, minute=51),
+        'schedule': crontab(hour=14, minute=58),
     },
     'check-streaks-every-night': {
         'task': 'account.tasks.check_streaks',
-        'schedule': crontab(hour=12, minute=36),
+        'schedule': crontab(hour=23, minute=50),
     },
 }
 

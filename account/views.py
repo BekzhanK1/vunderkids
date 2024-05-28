@@ -6,11 +6,14 @@ from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
 from django.shortcuts import get_object_or_404
 from django.contrib.auth import authenticate
+from django.conf import settings
 from account.serializers import *
 from account.models import *
 from account.permissions import *
+from tasks.models import TaskCompletion
 from .tasks import send_password_reset_request_email
 import uuid
+from datetime import timedelta, datetime
 
 class ActivateAccount(APIView):
     def get(self, request, token):
@@ -160,7 +163,7 @@ class ChildrenViewSet(viewsets.ModelViewSet):
 
     def create(self, request):
         parent = request.user.parent
-        data = request.data
+        data = request.data.copy()
         data['parent'] = parent.pk
         serializer = self.serializer_class(data=data)
         if serializer.is_valid():
@@ -170,14 +173,13 @@ class ChildrenViewSet(viewsets.ModelViewSet):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def get_queryset(self):
-        print(self.request.user.parent)
         parent = self.request.user.parent
         return Child.objects.filter(parent=parent)
     
 
 
 class TopStudentsView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsParent | IsStudent]
 
     def get(self, request, rating_type):
         user = request.user
@@ -216,7 +218,7 @@ class TopStudentsView(APIView):
                 top_students.sort(key=lambda student: student.cups, reverse=True)
                 top_students = top_students[:10]
 
-            serializer = StudentSerializer(top_students, many=True, context={'request': request})
+            serializer = SimpleStudentSerializer(top_students, many=True, context={'request': request})
             return Response(serializer.data, status=200)
 
         elif user.is_parent and child_id:
@@ -240,6 +242,57 @@ class TopStudentsView(APIView):
             return Response(serializer.data, status=200)
         
         return Response({"detail": "Invalid request. Parent must provide child_id."}, status=400)
+    
+
+class WeeklyProgressAPIView(APIView):
+    permission_classes = [IsStudent | IsParent]
+    def get(self, request):
+        user = request.user
+        child_id = request.query_params.get('child_id', None)
+
+        today = timezone.now().date()
+        start_date = today - timedelta(days=6)
+        
+        if user.is_student:
+            task_completions = TaskCompletion.objects.filter(
+                user=user,
+                completed_at__date__gte=start_date,
+                completed_at__date__lte=today
+            )
+        elif user.is_parent and child_id:
+            parent = user.parent
+            child = get_object_or_404(Child, pk=child_id, parent=parent)
+            task_completions = TaskCompletion.objects.filter(
+                child=child,
+                completed_at__date__gte=start_date,
+                completed_at__date__lte=today
+            )
+        else:
+            return Response({"message": "Invalid request. Parent must provide child_id."}, status=status.HTTP_400_BAD_REQUEST)
+
+        
+        daily_progress = {str(start_date + timedelta(days=i)): 0 for i in range(7)}
+        
+        for task_completion in task_completions:
+            day = str(task_completion.completed_at.date())
+            if day in daily_progress:
+                daily_progress[day] += settings.TASK_REWARD
+        
+        date_to_day = {
+            (start_date + timedelta(days=i)): (start_date + timedelta(days=i)).strftime('%A')
+            for i in range(7)
+        }
+        
+        response_data = {
+            "weekly_progress": [
+                {"day": date_to_day[datetime.strptime(date, "%Y-%m-%d").date()], "cups": cups}
+                for date, cups in daily_progress.items()
+            ]
+        }
+        
+        return Response(response_data, status=status.HTTP_200_OK)
+
+
 
         
 
@@ -253,14 +306,15 @@ class CurrentUserView(APIView):
         data = {}
         if request.user.is_student:
             student = Student.objects.get(user=request.user)
-            grade = student.grade
+            avatar_url = f"http://localhost:8000{student.avatar.url}" if student.avatar else None
             data['user'] = {
-                'user_id': request.user.id,
+                'id': request.user.id,
                 'email': request.user.email,
                 'first_name': request.user.first_name,
                 'last_name': request.user.last_name,
                 'role': request.user.role,
-                'grade': grade,
+                'grade': student.grade,
+                'avatar': avatar_url,
                 'level': student.level,
                 'streak': student.streak,
                 'cups': student.cups,
@@ -273,7 +327,7 @@ class CurrentUserView(APIView):
             parent = request.user.parent
             children = Child.objects.filter(parent = parent)
             data['user'] = {
-                'user_id': request.user.id,
+                'id': request.user.id,
                 'email': request.user.email,
                 'first_name': request.user.first_name,
                 'last_name': request.user.last_name,
@@ -284,7 +338,7 @@ class CurrentUserView(APIView):
             }
         else:
             data['user'] = {
-                'user_id': request.user.id,
+                'id': request.user.id,
                 'email': request.user.email,
                 'first_name': request.user.first_name,
                 'last_name': request.user.last_name,

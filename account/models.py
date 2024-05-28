@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import date, timedelta
 from django.utils import timezone
 import uuid
 from django.db import models
@@ -84,6 +84,11 @@ class LevelRequirement(models.Model):
 
 class Student(models.Model):
     GRADE_CHOICES = [(i, str(i)) for i in range(0, 13)]
+    GENDER_CHOICES = [
+        ('M', 'Male'),
+        ('F', 'Female'),
+        ('O', 'Other'),
+    ]
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='student')
     school_class = models.ForeignKey(Class, on_delete=models.SET_NULL, null=True, blank=True, related_name='students')
     school = models.ForeignKey(School, on_delete=models.SET_NULL, null=True, blank=True, related_name='students')
@@ -92,6 +97,9 @@ class Student(models.Model):
     streak = models.PositiveIntegerField(default=0)
     cups = models.PositiveIntegerField(default=0)
     stars = models.PositiveIntegerField(default=0)
+    gender = models.CharField(max_length=1, choices=GENDER_CHOICES, default="O")
+    avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
+    birth_date = models.DateField(default=date(2015, 1, 1))
     last_task_completed_at = models.DateTimeField(null=True, blank = True)
 
     def __str__(self):
@@ -128,16 +136,22 @@ class Parent(models.Model):
 
 class Child(models.Model):
     GRADE_CHOICES = [(i, str(i)) for i in range(0, 13)]
+    GENDER_CHOICES = [
+        ('M', 'Male'),
+        ('F', 'Female'),
+        ('O', 'Other'),
+    ]
     parent = models.ForeignKey(Parent, on_delete=models.CASCADE, related_name='children')
     first_name = models.CharField(max_length=30)
     last_name = models.CharField(max_length=150)
-    school = models.CharField(max_length=255, default="NIS")
     grade = models.IntegerField(choices=GRADE_CHOICES)
     avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
+    gender = models.CharField(max_length=1, choices=GENDER_CHOICES, default="O")
     cups = models.PositiveIntegerField(default=0)
     stars = models.PositiveIntegerField(default=0)
     level = models.PositiveIntegerField(default=1)
     streak = models.PositiveIntegerField(default=0)
+    birth_date = models.DateField(default=date(2015, 1, 1))
     last_task_completed_at = models.DateTimeField(null=True, blank = True)
 
     def update_level(self):

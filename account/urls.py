@@ -36,4 +36,5 @@ urlpatterns = [
     path('reset-password/', RequestResetPassword.as_view(), name='request-reset-password'),
     path('reset-password/<uuid:token>/', ResetPassword.as_view(), name='reset-password'),
     path('rating/<str:rating_type>/', TopStudentsView.as_view(), name='top_students'),
+    path('progress/weekly/', WeeklyProgressAPIView.as_view(), name='weekly-progress'),
 ]

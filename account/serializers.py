@@ -144,6 +144,16 @@ class StudentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Student
         fields = '__all__'
+
+class SimpleStudentSerializer(serializers.ModelSerializer):
+    first_name = serializers.CharField(source='user.first_name')
+    last_name = serializers.CharField(source='user.last_name')
+    email = serializers.EmailField(source='user.email')
+    
+
+    class Meta:
+        model = Student
+        fields = ['id', 'first_name', 'last_name', 'email', 'grade', 'level', 'streak', 'cups', 'stars', 'gender', 'avatar', 'birth_date', 'last_task_completed_at', 'school_class', 'school']
         
         
 class ChildSerializer(serializers.ModelSerializer):
@@ -165,6 +175,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         if self.user.is_student:
             student = Student.objects.get(user=self.user)
             grade = student.grade
+            avatar_url = student.avatar.url if student.avatar else None
             data['user'] = {
                 'user_id': self.user.id,
                 'email': self.user.email,
@@ -172,6 +183,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
                 'last_name': self.user.last_name,
                 'role': self.user.role,
                 'grade': grade,
+                'avatar': avatar_url,
                 'level': student.level,
                 'streak': student.streak,
                 'cups': student.cups,

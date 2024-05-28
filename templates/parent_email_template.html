@@ -22,14 +22,18 @@
             <thead>
                 <tr>
                     <th>Child's Name</th>
-                    <th>Current XP</th>
+                    <th>Current Cups</th>
+                    <th>Current Stars</th>
+                    <th>Current Level</th>
                 </tr>
             </thead>
             <tbody>
                 {% for child in children %}
                 <tr>
                     <td>{{ child.first_name }} {{ child.last_name }}</td>
-                    <td>{{ child.xp }}</td>
+                    <td>{{ child.cups }}</td>
+                    <td>{{ child.stars }}</td>
+                    <td>{{ child.level }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
