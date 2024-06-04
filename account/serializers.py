@@ -87,9 +87,13 @@ class ParentSerializer(serializers.ModelSerializer):
         fields = '__all__'
     
 class SchoolSerializer(serializers.ModelSerializer):
+    student_number = serializers.SerializerMethodField()
     class Meta:
         model = School
         fields = '__all__'
+    
+    def get_student_number(self, obj):
+        return Student.objects.filter(school=obj).count()
         
         
 class ClassSerializer(serializers.ModelSerializer):
@@ -141,10 +145,39 @@ class StudentRegistrationSerializer(serializers.ModelSerializer):
     
 class StudentSerializer(serializers.ModelSerializer):
     user = UserSerializer()
+    school_name = serializers.SerializerMethodField()
     class Meta:
         model = Student
         fields = '__all__'
 
+    def get_school_name(self, obj):
+        return obj.school.name if obj.school else None
+    
+class StudentsListSerializer(serializers.ModelSerializer):
+    school_name = serializers.SerializerMethodField()
+    first_name = serializers.CharField(source='user.first_name')
+    last_name = serializers.CharField(source='user.last_name')
+    email = serializers.EmailField(source='user.email')
+
+
+    def get_school_name(self, obj):
+        return obj.school.name if obj.school else None
+
+    class Meta:
+        model = Student
+        fields = ['id', 'first_name', 'last_name', 'email', 'grade', 'school_name', 'gender']
+
+class ChildrenListSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(source='parent.user.email')
+    id = serializers.IntegerField(source='parent.user.id')
+    school_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Child
+        fields = ['id', 'first_name', 'last_name', 'email', 'grade', 'school_name', 'gender']
+
+    def get_school_name(self, obj):
+        return "Индивидуальный аккаунт"
 class SimpleStudentSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(source='user.first_name')
     last_name = serializers.CharField(source='user.last_name')
@@ -157,9 +190,13 @@ class SimpleStudentSerializer(serializers.ModelSerializer):
         
         
 class ChildSerializer(serializers.ModelSerializer):
+    # email = serializers.EmailField(source='parent.user.email')
     class Meta:
         model = Child       
         fields = '__all__'
+        
+    # def get_tasks_completed(self, obj):
+    #     return obj.completed_tasks.count()
         
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod

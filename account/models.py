@@ -59,6 +59,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 class School(models.Model):
     name = models.CharField(max_length=150)
     city = models.CharField(max_length=150)
+    email = models.EmailField(unique=False)
 
     def __str__(self):
         return f"{self.name} ({self.city})"

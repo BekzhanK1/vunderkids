@@ -91,23 +91,21 @@ class ParentRegistrationAPIView(APIView):
             return Response({"message": f"Вам было отправлено письмо активаций по адресу {data['email']}"}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class SchoolRegistrationAPIView(APIView):
-    permission_classes = [IsSuperUser | IsStaff]
-    def post(self, request):
-        serializer = SchoolSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response({"message": "Successfully created school"}, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 class SchoolViewSet(viewsets.ModelViewSet):
     queryset = School.objects.all()
     serializer_class = SchoolSerializer
-    permission_classes = [IsSuperUser | IsStaff]
+    permission_classes = [IsSuperUser]
+
+    def create(self, request, *args, **kwargs):
+        serializer = SchoolSerializer(data=request.data)
+        if serializer.is_valid():
+            school = serializer.save()
+            return Response({"message": "Successfully created school", "school_id": school.pk}, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class ClassViewSet(viewsets.ModelViewSet):
     serializer_class = ClassSerializer
-    permission_classes = [IsSuperUser | IsStaff]
+    permission_classes = [IsSuperUser]
 
     def get_queryset(self):
         return Class.objects.filter(school_id=self.kwargs['school_pk'])
@@ -129,7 +127,7 @@ class ClassViewSet(viewsets.ModelViewSet):
 
 class StudentViewSet(viewsets.ModelViewSet):
     serializer_class = StudentSerializer
-    permission_classes = [IsSuperUser | IsStaff]
+    permission_classes = [IsSuperUser]
 
     def get_queryset(self):
         return Student.objects.filter(school_class_id=self.kwargs['class_pk'])
@@ -158,7 +156,7 @@ class StudentViewSet(viewsets.ModelViewSet):
 
 class ChildrenViewSet(viewsets.ModelViewSet):
     serializer_class = ChildSerializer
-    permission_classes = [IsParent]
+    permission_classes = [IsParent | IsSuperUser]
 
 
     def create(self, request):
@@ -173,8 +171,11 @@ class ChildrenViewSet(viewsets.ModelViewSet):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def get_queryset(self):
-        parent = self.request.user.parent
-        return Child.objects.filter(parent=parent)
+        if self.request.user.is_parent:
+            parent = self.request.user.parent
+            return Child.objects.filter(parent=parent)
+        if self.request.user.is_superuser:
+            return Child.objects.all()
     
 
 
@@ -291,6 +292,19 @@ class WeeklyProgressAPIView(APIView):
         }
         
         return Response(response_data, status=status.HTTP_200_OK)
+    
+class AllStudentsView(APIView):
+    def get(self, request, *args, **kwargs):
+        students = Student.objects.all()
+        children = Child.objects.all()
+        
+        student_serializer = StudentsListSerializer(students, many=True)
+        child_serializer = ChildrenListSerializer(children, many=True)
+        
+        combined_data = student_serializer.data + child_serializer.data
+        
+        return Response(combined_data, status=status.HTTP_200_OK)
+
 
 
 
@@ -306,6 +320,7 @@ class CurrentUserView(APIView):
         data = {}
         if request.user.is_student:
             student = Student.objects.get(user=request.user)
+            tasks_completed = request.user.completed_tasks.count()
             avatar_url = f"http://localhost:8000{student.avatar.url}" if student.avatar else None
             data['user'] = {
                 'id': request.user.id,
@@ -320,8 +335,8 @@ class CurrentUserView(APIView):
                 'cups': student.cups,
                 'stars': student.stars,
                 'is_superuser': request.user.is_superuser,
-                'is_staff': request.user.is_staff
-
+                'is_staff': request.user.is_staff,
+                'tasks_completed': tasks_completed
             }
         elif request.user.is_parent:
             parent = request.user.parent
