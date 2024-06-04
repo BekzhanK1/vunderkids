@@ -51,7 +51,7 @@ class SectionViewSet(viewsets.ModelViewSet):
     permission_classes = [IsSuperUserOrStaffOrReadOnly]
 
     def get_queryset(self):
-        return Section.objects.filter(course_id=self.kwargs['course_pk'])
+        return Section.objects.filter(course_id=self.kwargs['course_pk']).order_by('contents__order')
     
     def create(self, request, course_pk=None):
         data = request.data
@@ -66,7 +66,6 @@ class SectionViewSet(viewsets.ModelViewSet):
         context = super().get_serializer_context()
         context.update({"request": self.request})
         return context
-    
 
 class ContentViewSet(viewsets.ModelViewSet):
     queryset = Content.objects.all()
@@ -74,12 +73,13 @@ class ContentViewSet(viewsets.ModelViewSet):
     permission_classes = [IsSuperUserOrStaffOrReadOnly]
 
     def get_queryset(self):
-        return Content.objects.filter(section_id=self.kwargs['section_pk'])
+        return Content.objects.filter(section_id=self.kwargs['section_pk']).order_by('order')
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
         context.update({"request": self.request})
         return context
+
 
 class LessonViewSet(viewsets.ModelViewSet):
     queryset = Lesson.objects.all()
@@ -87,7 +87,7 @@ class LessonViewSet(viewsets.ModelViewSet):
     permission_classes = [IsSuperUserOrStaffOrReadOnly]
 
     def get_queryset(self):
-        return Lesson.objects.filter(section_id=self.kwargs['section_pk'])
+        return Lesson.objects.filter(section_id=self.kwargs['section_pk']).order_by('order')
     
     def create(self, request, course_pk=None, section_pk=None):
         data = request.data
@@ -104,15 +104,13 @@ class LessonViewSet(viewsets.ModelViewSet):
         context.update({"request": self.request})
         return context
 
-
-
 class TaskViewSet(viewsets.ModelViewSet):
     queryset = Task.objects.all()
     serializer_class = TaskSerializer
     permission_classes = [IsSuperUserOrStaffOrReadOnly]
 
     def get_queryset(self):
-        return Task.objects.filter(section_id=self.kwargs['section_pk'])
+        return Task.objects.filter(section_id=self.kwargs['section_pk']).order_by('order')
     
     def create(self, request, course_pk=None, section_pk=None):
         data = request.data
