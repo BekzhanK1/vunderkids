@@ -190,13 +190,16 @@ class SimpleStudentSerializer(serializers.ModelSerializer):
         
         
 class ChildSerializer(serializers.ModelSerializer):
-    # email = serializers.EmailField(source='parent.user.email')
+    email = serializers.SerializerMethodField()
+    tasks_completed = serializers.SerializerMethodField()
     class Meta:
         model = Child       
         fields = '__all__'
         
-    # def get_tasks_completed(self, obj):
-    #     return obj.completed_tasks.count()
+    def get_tasks_completed(self, obj):
+        return obj.completed_tasks.count()
+    def get_email(self, obj):
+        return obj.parent.user.email
         
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod

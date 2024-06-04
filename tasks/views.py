@@ -1,21 +1,18 @@
 from rest_framework import viewsets, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.decorators import action
 from django.shortcuts import get_object_or_404
-from django.utils import timezone
 from django.conf import settings
-from account.permissions import *
+from rest_framework.decorators import action
+from account.permissions import IsSuperUserOrStaffOrReadOnly
 from account.models import Student, Child
 from .models import Answer, Course, Section, Lesson, Content, Task, Question, TaskCompletion
 from .serializers import AnswerSerializer, CourseSerializer, SectionSerializer, LessonSerializer, ContentSerializer, TaskSerializer, QuestionSerializer
-from rest_framework.parsers import MultiPartParser, FormParser
 
 class CourseViewSet(viewsets.ModelViewSet):
     queryset = Course.objects.all()
     serializer_class = CourseSerializer
     permission_classes = [IsSuperUserOrStaffOrReadOnly]
-
 
     def list(self, request):
         user = request.user
@@ -65,7 +62,19 @@ class SectionViewSet(viewsets.ModelViewSet):
             return Response({"message": "Section created successfully"}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors)
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context.update({"request": self.request})
+        return context
     
+
+class ContentViewSet(viewsets.ModelViewSet):
+    queryset = Content.objects.all()
+    serializer_class = ContentSerializer
+    permission_classes = [IsSuperUserOrStaffOrReadOnly]
+
+    def get_queryset(self):
+        return Content.objects.filter(section_id=self.kwargs['section_pk'])
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -80,47 +89,21 @@ class LessonViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return Lesson.objects.filter(section_id=self.kwargs['section_pk'])
     
-
     def create(self, request, course_pk=None, section_pk=None):
         data = request.data
         data['section'] = section_pk
+        data['type'] = "lesson"
         serializer = self.serializer_class(data=data)
         if serializer.is_valid():
             serializer.save()
             return Response({"message": "Lesson created successfully"}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors)
     
-
     def get_serializer_context(self):
         context = super().get_serializer_context()
         context.update({"request": self.request})
         return context
 
-from rest_framework.parsers import MultiPartParser, FormParser
-
-class ContentViewSet(viewsets.ModelViewSet):
-    queryset = Content.objects.all()
-    serializer_class = ContentSerializer
-    permission_classes = [IsSuperUserOrStaffOrReadOnly]
-    parser_classes = (MultiPartParser, FormParser)
-
-    def get_queryset(self):
-        return Content.objects.filter(lesson_id=self.kwargs['lesson_pk'])
-
-    def create(self, request, course_pk=None, section_pk=None, lesson_pk=None):
-        data = request.data.copy()  # Create a mutable copy of the data
-        data['lesson'] = lesson_pk
-
-        serializer = self.serializer_class(data=data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response({"message": "Content created successfully"}, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def get_serializer_context(self):
-        context = super().get_serializer_context()
-        context.update({"request": self.request})
-        return context
 
 
 class TaskViewSet(viewsets.ModelViewSet):
@@ -134,13 +117,12 @@ class TaskViewSet(viewsets.ModelViewSet):
     def create(self, request, course_pk=None, section_pk=None):
         data = request.data
         data['section'] = section_pk
+        data['type'] = "task"
         serializer = self.serializer_class(data=data)
         if serializer.is_valid():
             serializer.save()
             return Response({"message": "Task created successfully"}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors)
-
-    
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -195,7 +177,6 @@ class QuestionViewSet(viewsets.ModelViewSet):
                 entity = child
 
             if is_correct:
-
                 task = question.task
                 questions = task.questions.all()
                 if user.is_student:
@@ -216,6 +197,3 @@ class QuestionViewSet(viewsets.ModelViewSet):
             else:
                 return Response({"message": "Incorrect answer.", "is_correct": False}, status=status.HTTP_400_BAD_REQUEST)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-
-    

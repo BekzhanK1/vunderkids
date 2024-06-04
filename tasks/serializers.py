@@ -9,8 +9,6 @@ class ContentSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class LessonSerializer(serializers.ModelSerializer):
-    contents = ContentSerializer(many=True, read_only=True)
-
     class Meta:
         model = Lesson
         fields = '__all__'
@@ -18,7 +16,7 @@ class LessonSerializer(serializers.ModelSerializer):
 class LessonSummarySerializer(serializers.ModelSerializer):
     class Meta:
         model = Lesson
-        fields = ['id', 'title', 'description']
+        fields = '__all__'
 
 class QuestionSerializer(serializers.ModelSerializer):
     is_completed = serializers.SerializerMethodField()
@@ -87,7 +85,7 @@ class SectionSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
     def get_total_tasks(self, obj):
-        return obj.tasks.count()
+        return Task.objects.filter(section=obj).count()
 
     def get_completed_tasks(self, obj):
         user = self.context['request'].user
@@ -114,7 +112,7 @@ class SectionSummarySerializer(serializers.ModelSerializer):
         fields = ['id', 'title', 'description', 'total_tasks', 'completed_tasks', 'percentage_completed']
 
     def get_total_tasks(self, obj):
-        return obj.tasks.count()
+        return Task.objects.filter(section=obj).count()
 
     def get_completed_tasks(self, obj):
         user = self.context['request'].user

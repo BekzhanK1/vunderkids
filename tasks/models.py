@@ -20,33 +20,29 @@ class Section(models.Model):
 
     def __str__(self):
         return self.title
-
-
-class Lesson(models.Model):
-    title = models.CharField(max_length=255)
-    description = models.TextField()
-    section = models.ForeignKey(Section, related_name='lessons', on_delete=models.CASCADE)
-
-    def __str__(self):
-        return f"[Section {self.section}] {self.title}"
+    
 class Content(models.Model):
-    CONTENT_TYPE_CHOICES = [
-        ('video', 'Video'),
-        ('text', 'Text'),
-        ('file', 'File'),
-    ]
-    lesson = models.ForeignKey(Lesson, related_name='contents', on_delete=models.CASCADE)
-    content_type = models.CharField(max_length=10, choices=CONTENT_TYPE_CHOICES)
-    content = models.TextField()
-    file = models.FileField(blank=True, null=True, upload_to='files/')
-
-    def __str__(self):
-        return f'{self.content_type}: {self.content[:30]}'
-
-class Task(models.Model):
-    section = models.ForeignKey(Section, related_name='tasks', on_delete=models.CASCADE)
+    CONTENT_TYPE_CHOICES = (
+    ('task', 'Task'),
+    ('lesson', 'Lesson'),
+    )
     title = models.CharField(max_length=255)
     description = models.TextField()
+    order = models.IntegerField(default=0)
+    section = models.ForeignKey(Section, related_name='contents', null=True, on_delete=models.CASCADE)
+    type = models.CharField(max_length=10, choices=CONTENT_TYPE_CHOICES)
+    
+    def __str__(self):
+        return f"Content: (Section: {self.section.title} | Order: {self.order})"
+
+class Lesson(Content):
+    video_url = models.URLField(blank=True, null=True)
+    text = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return f"Lesson: {self.title}"
+
+class Task(Content):
 
     def __str__(self):
         return self.title
@@ -64,7 +60,6 @@ class Question(models.Model):
 
     def __str__(self):
         return f"[Task: {self.task}] {self.question_text}"
-
 
 class Answer(models.Model):
     user = models.ForeignKey(User, null=True, blank=True, related_name='answers', on_delete=models.CASCADE)
