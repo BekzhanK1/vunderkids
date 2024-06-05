@@ -108,7 +108,7 @@ class ClassViewSet(viewsets.ModelViewSet):
     permission_classes = [IsSuperUser]
 
     def get_queryset(self):
-        return Class.objects.filter(school_id=self.kwargs['school_pk'])
+        return Class.objects.filter(school_id=self.kwargs['school_pk']).order_by("grade")
     
 
     def create(self, request, *args, **kwargs):

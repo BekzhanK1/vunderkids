@@ -3,6 +3,9 @@ from rest_framework import serializers
 from .models import Course, Section, Lesson, Content, Task, Question, TaskCompletion, Answer
 from account.models import Child
 
+class AnswerSerializer(serializers.Serializer):
+    answer = serializers.CharField()
+
 class ContentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Content
@@ -16,7 +19,7 @@ class LessonSerializer(serializers.ModelSerializer):
 class LessonSummarySerializer(serializers.ModelSerializer):
     class Meta:
         model = Lesson
-        fields = '__all__'
+        fields = ['id', 'title', 'description', 'video_url', 'text', 'order']
 
 class QuestionSerializer(serializers.ModelSerializer):
     is_completed = serializers.SerializerMethodField()
@@ -34,9 +37,6 @@ class QuestionSerializer(serializers.ModelSerializer):
             child = get_object_or_404(Child, parent=user.parent, pk=child_id)
             return Answer.objects.filter(child=child, question=obj, is_correct=True).exists()
         return False
-    
-class AnswerSerializer(serializers.Serializer):
-    answer = serializers.CharField()
 
 class TaskSerializer(serializers.ModelSerializer):
     questions = QuestionSerializer(many=True, read_only=True)
@@ -74,8 +74,9 @@ class TaskSummarySerializer(serializers.ModelSerializer):
         return False
 
 class SectionSerializer(serializers.ModelSerializer):
-    tasks = TaskSummarySerializer(many=True, read_only=True)
-    lessons = LessonSummarySerializer(many=True, read_only=True)
+    contents = ContentSerializer(many=True, read_only=True)
+    # tasks = TaskSummarySerializer(many=True, read_only=True)
+    # lessons = LessonSummarySerializer(many=True, read_only=True)
     total_tasks = serializers.SerializerMethodField()
     completed_tasks = serializers.SerializerMethodField()
     percentage_completed = serializers.SerializerMethodField()

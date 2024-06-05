@@ -20,18 +20,18 @@ class Section(models.Model):
 
     def __str__(self):
         return self.title
-    
+
 class Content(models.Model):
     CONTENT_TYPE_CHOICES = (
-    ('task', 'Task'),
-    ('lesson', 'Lesson'),
+        ('task', 'Task'),
+        ('lesson', 'Lesson'),
     )
     title = models.CharField(max_length=255)
     description = models.TextField()
     order = models.IntegerField(default=0)
     section = models.ForeignKey(Section, related_name='contents', null=True, on_delete=models.CASCADE)
     type = models.CharField(max_length=10, choices=CONTENT_TYPE_CHOICES)
-    
+
     def __str__(self):
         return f"Content: (Section: {self.section.title} | Order: {self.order})"
 
@@ -43,23 +43,27 @@ class Lesson(Content):
         return f"Lesson: {self.title}"
 
 class Task(Content):
-
     def __str__(self):
         return self.title
 
 class Question(models.Model):
-    task = models.ForeignKey(Task, related_name='questions', on_delete=models.CASCADE)
-    question_text = models.TextField()
-    question_type = models.CharField(max_length=50, choices=[
+    QUESTION_TYPES = [
         ('multiple_choice', 'Multiple Choice'),
         ('drag_and_drop', 'Drag and Drop'),
         ('true_false', 'True or False'),
-    ])
-    options = models.JSONField(blank=True, null=True)
-    correct_answer = models.TextField()
+        ('mark_all', 'Mark All That Apply'),
+        ('number_line', 'Number Line'),
+        ('drag_position', 'Drag Position'),
+    ]
+    task = models.ForeignKey(Task, related_name='questions', on_delete=models.CASCADE)
+    question_text = models.TextField()
+    question_type = models.CharField(max_length=50, choices=QUESTION_TYPES)
+    options = models.JSONField(blank=True, null=True)  # For multiple choice, mark all, drag and drop
+    correct_answer = models.JSONField()  # Adjusted to JSONField to store complex answers if needed
 
     def __str__(self):
         return f"[Task: {self.task}] {self.question_text}"
+
 
 class Answer(models.Model):
     user = models.ForeignKey(User, null=True, blank=True, related_name='answers', on_delete=models.CASCADE)

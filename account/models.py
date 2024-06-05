@@ -180,3 +180,4 @@ class Child(models.Model):
 
     def __str__(self):
         return f"[Child] {self.first_name} {self.last_name}"
+    
