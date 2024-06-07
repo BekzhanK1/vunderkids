@@ -30,25 +30,25 @@ class Content(models.Model):
     description = models.TextField()
     order = models.IntegerField(default=0)
     section = models.ForeignKey(Section, related_name='contents', null=True, on_delete=models.CASCADE)
-    type = models.CharField(max_length=10, choices=CONTENT_TYPE_CHOICES)
+    content_type = models.CharField(max_length=10, choices=CONTENT_TYPE_CHOICES)
 
     def __str__(self):
         return f"Content: (Section: {self.section.title} | Order: {self.order})"
 
 class Lesson(Content):
     video_url = models.URLField(blank=True, null=True)
-    text = models.TextField(blank=True, null=True)
 
     def __str__(self):
         return f"Lesson: {self.title}"
 
 class Task(Content):
     def __str__(self):
-        return self.title
+        return f"Task: {self.title}"
 
 class Question(models.Model):
     QUESTION_TYPES = [
-        ('multiple_choice', 'Multiple Choice'),
+        ('multiple_choice_text', 'Multiple Choice Text'),
+        ('multiple_choice_images', 'Multiple Choice Images'),
         ('drag_and_drop', 'Drag and Drop'),
         ('true_false', 'True or False'),
         ('mark_all', 'Mark All That Apply'),
@@ -63,7 +63,6 @@ class Question(models.Model):
 
     def __str__(self):
         return f"[Task: {self.task}] {self.question_text}"
-
 
 class Answer(models.Model):
     user = models.ForeignKey(User, null=True, blank=True, related_name='answers', on_delete=models.CASCADE)

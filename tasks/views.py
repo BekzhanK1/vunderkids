@@ -56,7 +56,7 @@ class SectionViewSet(viewsets.ModelViewSet):
     def create(self, request, course_pk=None):
         data = request.data
         data['course'] = course_pk
-        serializer = self.serializer_class(data=data)
+        serializer = self.serializer_class(data=data, many=isinstance(data, list))
         if serializer.is_valid():
             serializer.save()
             return Response({"message": "Section created successfully"}, status=status.HTTP_201_CREATED)
@@ -91,7 +91,7 @@ class LessonViewSet(viewsets.ModelViewSet):
     def create(self, request, course_pk=None, section_pk=None):
         data = request.data
         data['section'] = section_pk
-        data['type'] = "lesson"
+        data['content_type'] = "lesson"
         serializer = self.serializer_class(data=data)
         if serializer.is_valid():
             serializer.save()
@@ -114,7 +114,7 @@ class TaskViewSet(viewsets.ModelViewSet):
     def create(self, request, course_pk=None, section_pk=None):
         data = request.data
         data['section'] = section_pk
-        data['type'] = "task"
+        data['content_type'] = "task"
         serializer = self.serializer_class(data=data)
         if serializer.is_valid():
             serializer.save()
@@ -137,7 +137,7 @@ class QuestionViewSet(viewsets.ModelViewSet):
     def create(self, request, course_pk=None, section_pk=None, task_pk=None):
         data = request.data
         data['task'] = task_pk
-        serializer = self.serializer_class(data=data)
+        serializer = self.serializer_class(data=data, many=isinstance(data, list))
         if serializer.is_valid():
             serializer.save()
             return Response({"message": "Question created successfully"}, status=status.HTTP_201_CREATED)
@@ -151,11 +151,9 @@ class QuestionViewSet(viewsets.ModelViewSet):
         answer = request.data.get('answer')
 
         if user.is_student:
-            entity = user
             is_answered = Answer.objects.filter(user=user, question=question, is_correct=True).exists()
         elif user.is_parent and child_id:
             child = get_object_or_404(Child, parent=user.parent, pk=child_id)
-            entity = child
             is_answered = Answer.objects.filter(child=child, question=question, is_correct=True).exists()
         else:
             return Response({"message": "Invalid request. Parent must provide child_id."}, status=status.HTTP_400_BAD_REQUEST)
@@ -163,39 +161,39 @@ class QuestionViewSet(viewsets.ModelViewSet):
         if is_answered:
             return Response({"message": "Question already answered."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Validate the answer based on question type
-        is_correct = False
-        if question.question_type == 'multiple_choice' or question.question_type == 'true_false':
-            is_correct = answer == question.correct_answer
-        elif question.question_type == 'mark_all':
-            is_correct = set(answer) == set(question.correct_answer)
-        elif question.question_type == 'drag_and_drop' or question.question_type == 'drag_position':
-            is_correct = answer == question.correct_answer
-        elif question.question_type == 'number_line':
-            is_correct = answer == question.correct_answer  # Specific validation logic for number line questions
+        is_correct = self.validate_answer(question, answer)
 
         if is_correct:
             Answer.objects.create(user=user if user.is_student else None, child=child if user.is_parent else None, question=question, answer=answer, is_correct=is_correct)
-            # Check if the task is completed
-            task = question.task
-            questions = task.questions.all()
-            if user.is_student:
-                answered_questions = Answer.objects.filter(user=user, question__in=questions, is_correct=True).count()
-            elif user.is_parent:
-                answered_questions = Answer.objects.filter(child=child, question__in=questions, is_correct=True).count()
-
-            if answered_questions == questions.count():
-                task_reward = settings.TASK_REWARD
-                entity.cups += task_reward
-                entity.stars += task_reward
-                entity.save()
-                entity.update_level()
-                TaskCompletion.objects.create(user=user if user.is_student else None, child=child if user.is_parent else None, task=task)
-                entity.update_streak()
-                return Response({"message": "Correct answer! Task completed. Cups and stars updated.", "is_correct": True}, status=status.HTTP_200_OK)
-            return Response({"message": "Correct answer! Cups and stars updated.", "is_correct": True}, status=status.HTTP_200_OK)
+            return self.handle_correct_answer(user, child, question)
         else:
             Answer.objects.create(user=user if user.is_student else None, child=child if user.is_parent else None, question=question, answer=answer, is_correct=is_correct)
             return Response({"message": "Incorrect answer.", "is_correct": False}, status=status.HTTP_400_BAD_REQUEST)
 
-        return Response({"message": "Answer submission failed."}, status=status.HTTP_400_BAD_REQUEST)
+    def validate_answer(self, question, answer):
+        if question.question_type in ['multiple_choice_text', 'true_false', 'drag_and_drop', 'drag_position', 'number_line']:
+            return answer == question.correct_answer
+        elif question.question_type == 'mark_all':
+            return set(answer) == set(question.correct_answer)
+        return False
+
+    def handle_correct_answer(self, user, child, question):
+        task = question.task
+        questions = task.questions.all()
+        entity = user if user.is_student else child
+
+        if user.is_student:
+            answered_questions = Answer.objects.filter(user=user, question__in=questions, is_correct=True).count()
+        elif user.is_parent:
+            answered_questions = Answer.objects.filter(child=child, question__in=questions, is_correct=True).count()
+
+        if answered_questions == questions.count():
+            task_reward = settings.TASK_REWARD
+            entity.cups += task_reward
+            entity.stars += task_reward
+            entity.save()
+            entity.update_level()
+            TaskCompletion.objects.create(user=user if user.is_student else None, child=child if user.is_parent else None, task=task)
+            entity.update_streak()
+            return Response({"message": "Correct answer! Task completed. Cups and stars updated.", "is_correct": True}, status=status.HTTP_200_OK)
+        return Response({"message": "Correct answer! Cups and stars updated.", "is_correct": True}, status=status.HTTP_200_OK)
