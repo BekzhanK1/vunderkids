@@ -31,6 +31,12 @@ class Content(models.Model):
     order = models.IntegerField(default=0)
     section = models.ForeignKey(Section, related_name='contents', null=True, on_delete=models.CASCADE)
     content_type = models.CharField(max_length=10, choices=CONTENT_TYPE_CHOICES)
+    
+    def save(self, *args, **kwargs):
+        if self.order == 0:
+            last_order = Content.objects.filter(section=self.section).aggregate(models.Max('order'))['order__max']
+            self.order = (last_order + 1) if last_order is not None else 0
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Content: (Section: {self.section.title} | Order: {self.order})"

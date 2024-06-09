@@ -81,7 +81,7 @@ class ContentViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return Content.objects.filter(section_id=self.kwargs['section_pk']).order_by('order')
 
-    def create(self, request, section_pk=None):
+    def create(self, request, course_pk=None, section_pk=None):
         data = request.data
         data['section'] = section_pk
         serializer = self.serializer_class(data=data, context={'request': request})
@@ -89,6 +89,21 @@ class ContentViewSet(viewsets.ModelViewSet):
             content = serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=False, methods=['patch'], permission_classes=[IsSuperUserOrStaffOrReadOnly])
+    def update_contents(self, request, course_pk=None, section_pk=None):
+        contents_data = request.data.get('contents')
+        if not contents_data:
+            return Response({"detail": "Contents data is missing."}, status=status.HTTP_400_BAD_REQUEST)
+
+        for content_data in contents_data:
+            content = get_object_or_404(Content, id=content_data['id'])
+            content.order = content_data.get('order', content.order)
+            content.title = content_data.get('title', content.title)
+            content.description = content_data.get('description', content.description)
+            content.save()
+
+        return Response({"detail": "Contents updated successfully."}, status=status.HTTP_200_OK)
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
