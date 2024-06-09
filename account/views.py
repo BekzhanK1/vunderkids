@@ -79,8 +79,11 @@ class StaffRegistrationAPIView(APIView):
         data['role'] = 'staff'
         serializer = StaffRegistrationSerializer(data=data)
         if serializer.is_valid():
-            serializer.save()
-            return Response({"message": "Staff user is registered successfully"})
+            staff = serializer.save()
+            return Response({
+                "message": "Staff user is registered successfully",
+                "staff_id": staff.pk
+            }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class ParentRegistrationAPIView(APIView):
@@ -88,8 +91,11 @@ class ParentRegistrationAPIView(APIView):
         data = request.data
         serializer = ParentRegistrationSerializer(data=data)
         if serializer.is_valid():
-            serializer.save()
-            return Response({"message": f"Вам было отправлено письмо активаций по адресу {data['email']}"}, status=status.HTTP_201_CREATED)
+            parent = serializer.save()
+            return Response({
+                "message": f"Вам было отправлено письмо активаций по адресу {data['email']}",
+                "parent_id": parent.pk
+            }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class SchoolViewSet(viewsets.ModelViewSet):
@@ -101,7 +107,7 @@ class SchoolViewSet(viewsets.ModelViewSet):
         serializer = SchoolSerializer(data=request.data)
         if serializer.is_valid():
             school = serializer.save()
-            return Response({"message": "Successfully created school", "school_id": school.pk}, status=status.HTTP_201_CREATED)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class ClassViewSet(viewsets.ModelViewSet):
@@ -111,20 +117,16 @@ class ClassViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return Class.objects.filter(school_id=self.kwargs['school_pk']).order_by("grade")
     
-
     def create(self, request, *args, **kwargs):
         school_id = self.kwargs['school_pk']
         data = request.data.copy()
         data['school'] = school_id
 
         serializer = self.get_serializer(data=data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-
-        headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
-    
-
+        if serializer.is_valid():
+            school_class = serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class StudentViewSet(viewsets.ModelViewSet):
     serializer_class = StudentSerializer
@@ -133,7 +135,6 @@ class StudentViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return Student.objects.filter(school_class_id=self.kwargs['class_pk'])
     
-
     def create(self, request, *args, **kwargs):
         school_id = self.kwargs['school_pk']
         class_id = self.kwargs['class_pk']
@@ -152,13 +153,10 @@ class StudentViewSet(viewsets.ModelViewSet):
             }, status=status.HTTP_201_CREATED)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-
 
 class ChildrenViewSet(viewsets.ModelViewSet):
     serializer_class = ChildSerializer
     permission_classes = [IsParent | IsSuperUser]
-
 
     def create(self, request):
         parent = request.user.parent
@@ -167,7 +165,7 @@ class ChildrenViewSet(viewsets.ModelViewSet):
         serializer = self.serializer_class(data=data)
         if serializer.is_valid():
             serializer.save()
-            return Response({"message": "Child added successfully"}, status=status.HTTP_201_CREATED)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

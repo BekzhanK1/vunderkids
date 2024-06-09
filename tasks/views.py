@@ -7,7 +7,7 @@ from rest_framework.decorators import action
 from account.permissions import IsSuperUserOrStaffOrReadOnly
 from account.models import Student, Child
 from .models import Answer, Course, Section, Lesson, Content, Task, Question, TaskCompletion
-from .serializers import AnswerSerializer, CourseSerializer, SectionSerializer, LessonSerializer, ContentSerializer, TaskSerializer, QuestionSerializer
+from .serializers import CourseSerializer, SectionSerializer, LessonSerializer, ContentSerializer, TaskSerializer, QuestionSerializer
 
 class CourseViewSet(viewsets.ModelViewSet):
     queryset = Course.objects.all()
@@ -34,11 +34,11 @@ class CourseViewSet(viewsets.ModelViewSet):
         user = request.user
         data = request.data
         data['created_by'] = user.id
-        serializer = self.serializer_class(data=data)
+        serializer = self.serializer_class(data=data, context={'request': request})
         if serializer.is_valid():
-            serializer.save()
-            return Response({"message": "Course created successfully"}, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors)
+            course = serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -64,9 +64,9 @@ class SectionViewSet(viewsets.ModelViewSet):
 
         serializer = self.serializer_class(data=data, many=isinstance(data, list))
         if serializer.is_valid():
-            serializer.save()
-            return Response({"message": "Section(s) created successfully"}, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors)
+            sections = serializer.save()
+            return Response(self.serializer_class(sections, many=isinstance(data, list)).data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -80,6 +80,15 @@ class ContentViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return Content.objects.filter(section_id=self.kwargs['section_pk']).order_by('order')
+
+    def create(self, request, section_pk=None):
+        data = request.data
+        data['section'] = section_pk
+        serializer = self.serializer_class(data=data, context={'request': request})
+        if serializer.is_valid():
+            content = serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -96,13 +105,20 @@ class LessonViewSet(viewsets.ModelViewSet):
     
     def create(self, request, course_pk=None, section_pk=None):
         data = request.data
-        data['section'] = section_pk
-        data['content_type'] = "lesson"
-        serializer = self.serializer_class(data=data)
+
+        if isinstance(data, list):
+            for item in data:
+                item['section'] = section_pk
+                item['content_type'] = "lesson"
+        else:
+            data['section'] = section_pk
+            data['content_type'] = "lesson"
+
+        serializer = self.serializer_class(data=data, many=isinstance(data, list), context={'request': request})
         if serializer.is_valid():
-            serializer.save()
-            return Response({"message": "Lesson created successfully"}, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors)
+            lessons = serializer.save()
+            return Response(self.serializer_class(lessons, many=isinstance(data, list)).data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -119,13 +135,20 @@ class TaskViewSet(viewsets.ModelViewSet):
     
     def create(self, request, course_pk=None, section_pk=None):
         data = request.data
-        data['section'] = section_pk
-        data['content_type'] = "task"
-        serializer = self.serializer_class(data=data)
+
+        if isinstance(data, list):
+            for item in data:
+                item['section'] = section_pk
+                item['content_type'] = "task"
+        else:
+            data['section'] = section_pk
+            data['content_type'] = "task"
+
+        serializer = self.serializer_class(data=data, many=isinstance(data, list), context={'request': request})
         if serializer.is_valid():
-            serializer.save()
-            return Response({"message": "Task created successfully"}, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors)
+            tasks = serializer.save()
+            return Response(self.serializer_class(tasks, many=isinstance(data, list)).data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -149,11 +172,11 @@ class QuestionViewSet(viewsets.ModelViewSet):
         else:
             data['task'] = task_pk
             
-        serializer = self.serializer_class(data=data, many=isinstance(data, list))
+        serializer = self.serializer_class(data=data, many=isinstance(data, list), context={'request': request})
         if serializer.is_valid():
-            serializer.save()
-            return Response({"message": "Question(s) created successfully"}, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors)
+            questions = serializer.save()
+            return Response(self.serializer_class(questions, many=isinstance(data, list)).data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=True, methods=['post'], url_path='answer', permission_classes=[IsAuthenticated])
     def answer(self, request, *args, **kwargs):

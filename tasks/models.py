@@ -7,14 +7,14 @@ User = get_user_model()
 class Course(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField()
-    grade = models.IntegerField(db_index=True)
+    grade = models.IntegerField()
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
 
     def __str__(self):
         return f"{self.name} ({self.grade} Класс)"
 
 class Section(models.Model):
-    course = models.ForeignKey(Course, related_name='sections', on_delete=models.CASCADE, db_index=True)
+    course = models.ForeignKey(Course, related_name='sections', on_delete=models.CASCADE)
     title = models.CharField(max_length=255)
     description = models.TextField()
 
@@ -29,7 +29,7 @@ class Content(models.Model):
     title = models.CharField(max_length=255)
     description = models.TextField()
     order = models.IntegerField(default=0)
-    section = models.ForeignKey(Section, related_name='contents', null=True, on_delete=models.CASCADE, db_index=True)
+    section = models.ForeignKey(Section, related_name='contents', null=True, on_delete=models.CASCADE)
     content_type = models.CharField(max_length=10, choices=CONTENT_TYPE_CHOICES)
 
     def __str__(self):
@@ -55,7 +55,7 @@ class Question(models.Model):
         ('number_line', 'Number Line'),
         ('drag_position', 'Drag Position'),
     ]
-    task = models.ForeignKey(Task, related_name='questions', on_delete=models.CASCADE, db_index=True)
+    task = models.ForeignKey(Task, related_name='questions', on_delete=models.CASCADE)
     question_text = models.TextField()
     question_type = models.CharField(max_length=50, choices=QUESTION_TYPES)
     options = models.JSONField(blank=True, null=True)  # For multiple choice, mark all, drag and drop
@@ -65,8 +65,8 @@ class Question(models.Model):
         return f"[Task: {self.task}] {self.question_text}"
 
 class Answer(models.Model):
-    user = models.ForeignKey(User, null=True, blank=True, related_name='answers', on_delete=models.CASCADE, db_index=True)
-    child = models.ForeignKey(Child, null=True, blank=True, related_name='answers', on_delete=models.CASCADE, db_index=True)
+    user = models.ForeignKey(User, null=True, blank=True, related_name='answers', on_delete=models.CASCADE)
+    child = models.ForeignKey(Child, null=True, blank=True, related_name='answers', on_delete=models.CASCADE)
     question = models.ForeignKey(Question, related_name='answers', on_delete=models.CASCADE)
     answer = models.TextField()
     is_correct = models.BooleanField()
@@ -75,9 +75,9 @@ class Answer(models.Model):
         return f"{self.user} - {self.question}"
 
 class TaskCompletion(models.Model):
-    user = models.ForeignKey(User, null=True, blank=True, related_name='completed_tasks', on_delete=models.CASCADE, db_index=True)
-    child = models.ForeignKey(Child, null=True, blank=True, related_name='completed_tasks', on_delete=models.CASCADE, db_index=True)
-    task = models.ForeignKey(Task, related_name='completed_by', on_delete=models.CASCADE, db_index=True)
+    user = models.ForeignKey(User, null=True, blank=True, related_name='completed_tasks', on_delete=models.CASCADE)
+    child = models.ForeignKey(Child, null=True, blank=True, related_name='completed_tasks', on_delete=models.CASCADE)
+    task = models.ForeignKey(Task, related_name='completed_by', on_delete=models.CASCADE)
     completed_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

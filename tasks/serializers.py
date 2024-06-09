@@ -29,8 +29,12 @@ class QuestionSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
     def get_is_completed(self, obj):
-        user = self.context['request'].user
-        child_id = self.context['request'].query_params.get('child_id')
+        request = self.context.get('request', None)
+        if not request:
+            return False
+        
+        user = request.user
+        child_id = request.query_params.get('child_id')
         if user.is_student:
             return Answer.objects.filter(user=user, question=obj, is_correct=True).exists()
         elif user.is_parent and child_id:
@@ -47,8 +51,12 @@ class TaskSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
     def get_is_completed(self, obj):
-        user = self.context['request'].user
-        child_id = self.context['request'].query_params.get('child_id')
+        request = self.context.get('request', None)
+        if not request:
+            return False
+
+        user = request.user
+        child_id = request.query_params.get('child_id')
         if user.is_student:
             return TaskCompletion.objects.filter(user=user, task=obj).exists()
         elif user.is_parent and child_id:
@@ -64,8 +72,12 @@ class TaskSummarySerializer(serializers.ModelSerializer):
         fields = ['id', 'title', 'description', 'is_completed']
 
     def get_is_completed(self, obj):
-        user = self.context['request'].user
-        child_id = self.context['request'].query_params.get('child_id')
+        request = self.context.get('request', None)
+        if not request:
+            return False
+
+        user = request.user
+        child_id = request.query_params.get('child_id')
         if user.is_student:
             return TaskCompletion.objects.filter(user=user, task=obj).exists()
         elif user.is_parent and child_id:
@@ -75,8 +87,6 @@ class TaskSummarySerializer(serializers.ModelSerializer):
 
 class SectionSerializer(serializers.ModelSerializer):
     contents = ContentSerializer(many=True, read_only=True)
-    # tasks = TaskSummarySerializer(many=True, read_only=True)
-    # lessons = LessonSummarySerializer(many=True, read_only=True)
     total_tasks = serializers.SerializerMethodField()
     completed_tasks = serializers.SerializerMethodField()
     percentage_completed = serializers.SerializerMethodField()
@@ -89,8 +99,12 @@ class SectionSerializer(serializers.ModelSerializer):
         return Task.objects.filter(section=obj).count()
 
     def get_completed_tasks(self, obj):
-        user = self.context['request'].user
-        child_id = self.context['request'].query_params.get('child_id')
+        request = self.context.get('request', None)
+        if not request:
+            return 0
+
+        user = request.user
+        child_id = request.query_params.get('child_id')
         if user.is_student:
             return TaskCompletion.objects.filter(user=user, task__section=obj).count()
         elif user.is_parent and child_id:
@@ -116,8 +130,12 @@ class SectionSummarySerializer(serializers.ModelSerializer):
         return Task.objects.filter(section=obj).count()
 
     def get_completed_tasks(self, obj):
-        user = self.context['request'].user
-        child_id = self.context['request'].query_params.get('child_id')
+        request = self.context.get('request', None)
+        if not request:
+            return 0
+
+        user = request.user
+        child_id = request.query_params.get('child_id')
         if user.is_student:
             return TaskCompletion.objects.filter(user=user, task__section=obj).count()
         elif user.is_parent and child_id:
@@ -144,8 +162,12 @@ class CourseSerializer(serializers.ModelSerializer):
         return Task.objects.filter(section__course=obj).count()
 
     def get_completed_tasks(self, obj):
-        user = self.context['request'].user
-        child_id = self.context['request'].query_params.get('child_id')
+        request = self.context.get('request', None)
+        if not request:
+            return 0
+
+        user = request.user
+        child_id = request.query_params.get('child_id')
         if user.is_student:
             return TaskCompletion.objects.filter(user=user, task__section__course=obj).count()
         elif user.is_parent and child_id:
