@@ -55,11 +55,17 @@ class SectionViewSet(viewsets.ModelViewSet):
     
     def create(self, request, course_pk=None):
         data = request.data
-        data['course'] = course_pk
+
+        if isinstance(data, list):
+            for item in data:
+                item['course'] = course_pk
+        else:
+            data['course'] = course_pk
+
         serializer = self.serializer_class(data=data, many=isinstance(data, list))
         if serializer.is_valid():
             serializer.save()
-            return Response({"message": "Section created successfully"}, status=status.HTTP_201_CREATED)
+            return Response({"message": "Section(s) created successfully"}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors)
 
     def get_serializer_context(self):
@@ -136,11 +142,17 @@ class QuestionViewSet(viewsets.ModelViewSet):
 
     def create(self, request, course_pk=None, section_pk=None, task_pk=None):
         data = request.data
-        data['task'] = task_pk
+
+        if isinstance(data, list):
+            for item in data:
+                item['task'] = task_pk
+        else:
+            data['task'] = task_pk
+            
         serializer = self.serializer_class(data=data, many=isinstance(data, list))
         if serializer.is_valid():
             serializer.save()
-            return Response({"message": "Question created successfully"}, status=status.HTTP_201_CREATED)
+            return Response({"message": "Question(s) created successfully"}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors)
 
     @action(detail=True, methods=['post'], url_path='answer', permission_classes=[IsAuthenticated])

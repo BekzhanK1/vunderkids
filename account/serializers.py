@@ -1,3 +1,4 @@
+from django.conf import settings
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.core.validators import validate_email
@@ -5,7 +6,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from django.contrib.auth import get_user_model
 from account.models import *
 from .tasks import send_activation_email
-from .utils import generate_password
+from .utils import generate_password, get_presigned_url
 
 
 
@@ -146,12 +147,18 @@ class StudentRegistrationSerializer(serializers.ModelSerializer):
 class StudentSerializer(serializers.ModelSerializer):
     user = UserSerializer()
     school_name = serializers.SerializerMethodField()
+    avatar_url = serializers.SerializerMethodField()
     class Meta:
         model = Student
         fields = '__all__'
 
     def get_school_name(self, obj):
         return obj.school.name if obj.school else None
+    
+    def get_avatar_url(self, obj):
+        if obj.avatar:
+            return f"https://{settings.AWS_STORAGE_BUCKET_NAME}.s3.{settings.AWS_S3_REGION_NAME}.amazonaws.com/{obj.avatar.name}"
+        return None
     
 class StudentsListSerializer(serializers.ModelSerializer):
     school_name = serializers.SerializerMethodField()
@@ -182,16 +189,23 @@ class SimpleStudentSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(source='user.first_name')
     last_name = serializers.CharField(source='user.last_name')
     email = serializers.EmailField(source='user.email')
-    
+    avatar_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Student
         fields = ['id', 'first_name', 'last_name', 'email', 'grade', 'level', 'streak', 'cups', 'stars', 'gender', 'avatar', 'birth_date', 'last_task_completed_at', 'school_class', 'school']
         
+    def get_avatar_url(self, obj):
+        if obj.avatar:
+            return get_presigned_url(settings.AWS_STORAGE_BUCKET_NAME, obj.avatar)
+        return None
         
 class ChildSerializer(serializers.ModelSerializer):
     email = serializers.SerializerMethodField()
     tasks_completed = serializers.SerializerMethodField()
+    avatar_url = serializers.SerializerMethodField()
+
+
     class Meta:
         model = Child       
         fields = '__all__'
@@ -200,6 +214,10 @@ class ChildSerializer(serializers.ModelSerializer):
         return obj.completed_tasks.count()
     def get_email(self, obj):
         return obj.parent.user.email
+    def get_avatar_url(self, obj):
+        if obj.avatar:
+            return f"https://{settings.AWS_STORAGE_BUCKET_NAME}.s3.{settings.AWS_S3_REGION_NAME}.amazonaws.com/{obj.avatar.name}"
+        return None
         
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
