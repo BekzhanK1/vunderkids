@@ -203,7 +203,6 @@ class SimpleStudentSerializer(serializers.ModelSerializer):
 class ChildSerializer(serializers.ModelSerializer):
     email = serializers.SerializerMethodField()
     tasks_completed = serializers.SerializerMethodField()
-    avatar_url = serializers.SerializerMethodField()
 
 
     class Meta:
@@ -214,10 +213,6 @@ class ChildSerializer(serializers.ModelSerializer):
         return obj.completed_tasks.count()
     def get_email(self, obj):
         return obj.parent.user.email
-    def get_avatar_url(self, obj):
-        if obj.avatar:
-            return f"https://{settings.AWS_STORAGE_BUCKET_NAME}.s3.{settings.AWS_S3_REGION_NAME}.amazonaws.com/{obj.avatar.name}"
-        return None
         
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod

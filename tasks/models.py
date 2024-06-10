@@ -69,6 +69,14 @@ class Question(models.Model):
 
     def __str__(self):
         return f"[Task: {self.task}] {self.question_text}"
+    
+class Image(models.Model):
+    image = models.ImageField(upload_to='questions/')
+    question = models.ForeignKey(Question, related_name='images', on_delete=models.CASCADE)
+    
+    def __str__(self):
+        return f"Image for {self.question.id}"
+
 
 class Answer(models.Model):
     user = models.ForeignKey(User, null=True, blank=True, related_name='answers', on_delete=models.CASCADE)

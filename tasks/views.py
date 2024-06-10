@@ -6,7 +6,7 @@ from django.conf import settings
 from rest_framework.decorators import action
 from account.permissions import IsSuperUserOrStaffOrReadOnly
 from account.models import Student, Child
-from .models import Answer, Course, Section, Lesson, Content, Task, Question, TaskCompletion
+from .models import Answer, Course, Image, Section, Lesson, Content, Task, Question, TaskCompletion
 from .serializers import CourseSerializer, SectionSerializer, LessonSerializer, ContentSerializer, TaskSerializer, QuestionSerializer
 
 class CourseViewSet(viewsets.ModelViewSet):
@@ -32,7 +32,7 @@ class CourseViewSet(viewsets.ModelViewSet):
 
     def create(self, request):
         user = request.user
-        data = request.data
+        data = request.data.copy()
         data['created_by'] = user.id
         serializer = self.serializer_class(data=data, context={'request': request})
         if serializer.is_valid():
@@ -54,7 +54,7 @@ class SectionViewSet(viewsets.ModelViewSet):
         return Section.objects.filter(course_id=self.kwargs['course_pk']).order_by('id')
     
     def create(self, request, course_pk=None):
-        data = request.data
+        data = request.data.copy()
 
         if isinstance(data, list):
             for item in data:
@@ -82,7 +82,7 @@ class ContentViewSet(viewsets.ModelViewSet):
         return Content.objects.filter(section_id=self.kwargs['section_pk']).order_by('order')
 
     def create(self, request, course_pk=None, section_pk=None):
-        data = request.data
+        data = request.data.copy()
         data['section'] = section_pk
         serializer = self.serializer_class(data=data, context={'request': request})
         if serializer.is_valid():
@@ -119,7 +119,7 @@ class LessonViewSet(viewsets.ModelViewSet):
         return Lesson.objects.filter(section_id=self.kwargs['section_pk']).order_by('order')
     
     def create(self, request, course_pk=None, section_pk=None):
-        data = request.data
+        data = request.data.copy()
 
         if isinstance(data, list):
             for item in data:
@@ -149,7 +149,7 @@ class TaskViewSet(viewsets.ModelViewSet):
         return Task.objects.filter(section_id=self.kwargs['section_pk']).order_by('order')
     
     def create(self, request, course_pk=None, section_pk=None):
-        data = request.data
+        data = request.data.copy()
 
         if isinstance(data, list):
             for item in data:
@@ -178,14 +178,14 @@ class QuestionViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return Question.objects.filter(task_id=self.kwargs['task_pk'])
 
-    def create(self, request, course_pk=None, section_pk=None, task_pk=None):
+    def create(self, request, *args, **kwargs):
         data = request.data
 
         if isinstance(data, list):
             for item in data:
-                item['task'] = task_pk
+                item['task'] = self.kwargs['task_pk']
         else:
-            data['task'] = task_pk
+            data['task'] = self.kwargs['task_pk']
             
         serializer = self.serializer_class(data=data, many=isinstance(data, list), context={'request': request})
         if serializer.is_valid():

@@ -1,6 +1,6 @@
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
-from .models import Course, Section, Lesson, Content, Task, Question, TaskCompletion, Answer
+from .models import Course, Image, Section, Lesson, Content, Task, Question, TaskCompletion, Answer
 from account.models import Child
 
 class AnswerSerializer(serializers.Serializer):
@@ -21,8 +21,14 @@ class LessonSummarySerializer(serializers.ModelSerializer):
         model = Lesson
         fields = ['id', 'title', 'description', 'video_url', 'text', 'order']
 
+class ImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Image
+        fields = ['id', 'image']
+
 class QuestionSerializer(serializers.ModelSerializer):
     is_completed = serializers.SerializerMethodField()
+    images = ImageSerializer(many=True, read_only=True)
 
     class Meta:
         model = Question
@@ -41,6 +47,15 @@ class QuestionSerializer(serializers.ModelSerializer):
             child = get_object_or_404(Child, parent=user.parent, pk=child_id)
             return Answer.objects.filter(child=child, question=obj, is_correct=True).exists()
         return False
+    
+    def create(self, validated_data):
+        images_data = self.context['request'].FILES.getlist('images')
+        question = Question.objects.create(**validated_data)
+        for image_data in images_data:
+            Image.objects.create(question=question, image=image_data)
+        return question
+
+
 
 class TaskSerializer(serializers.ModelSerializer):
     questions = QuestionSerializer(many=True, read_only=True)
