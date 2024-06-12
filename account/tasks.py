@@ -1,7 +1,7 @@
 from celery import shared_task
 from django.core.mail import EmailMultiAlternatives
 from django.conf import settings
-from account.models import Student, Parent, User
+from account.models import Child, Student, Parent, User
 from account.utils import render_email
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
@@ -78,3 +78,9 @@ def check_streaks():
             if now.date() != student.last_task_completed_at.date():
                 student.streak = 0
                 student.save()
+    children = Child.objects.all()
+    for child in children:
+        if child.last_task_completed_at:
+            if now.date() != child.last_task_completed_at.date():
+                child.streak = 0
+                child.save()

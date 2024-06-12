@@ -1,3 +1,4 @@
+from django.conf import settings
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.core.validators import validate_email
@@ -5,7 +6,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from django.contrib.auth import get_user_model
 from account.models import *
 from .tasks import send_activation_email
-from .utils import generate_password
+from .utils import generate_password, get_presigned_url
 
 
 
@@ -153,11 +154,13 @@ class StudentSerializer(serializers.ModelSerializer):
     def get_school_name(self, obj):
         return obj.school.name if obj.school else None
     
+    
 class StudentsListSerializer(serializers.ModelSerializer):
     school_name = serializers.SerializerMethodField()
     first_name = serializers.CharField(source='user.first_name')
     last_name = serializers.CharField(source='user.last_name')
     email = serializers.EmailField(source='user.email')
+    id = serializers.IntegerField(source='user.id')
 
 
     def get_school_name(self, obj):
@@ -169,12 +172,13 @@ class StudentsListSerializer(serializers.ModelSerializer):
 
 class ChildrenListSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(source='parent.user.email')
-    id = serializers.IntegerField(source='parent.user.id')
     school_name = serializers.SerializerMethodField()
+    parent_id = serializers.IntegerField(source='parent.user.id')
+
 
     class Meta:
         model = Child
-        fields = ['id', 'first_name', 'last_name', 'email', 'grade', 'school_name', 'gender']
+        fields = ['id', 'parent_id', 'first_name', 'last_name', 'email', 'grade', 'school_name', 'gender']
 
     def get_school_name(self, obj):
         return "Индивидуальный аккаунт"
@@ -182,8 +186,6 @@ class SimpleStudentSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(source='user.first_name')
     last_name = serializers.CharField(source='user.last_name')
     email = serializers.EmailField(source='user.email')
-    
-
     class Meta:
         model = Student
         fields = ['id', 'first_name', 'last_name', 'email', 'grade', 'level', 'streak', 'cups', 'stars', 'gender', 'avatar', 'birth_date', 'last_task_completed_at', 'school_class', 'school']
@@ -192,6 +194,8 @@ class SimpleStudentSerializer(serializers.ModelSerializer):
 class ChildSerializer(serializers.ModelSerializer):
     email = serializers.SerializerMethodField()
     tasks_completed = serializers.SerializerMethodField()
+
+
     class Meta:
         model = Child       
         fields = '__all__'
@@ -217,7 +221,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
             grade = student.grade
             avatar_url = student.avatar.url if student.avatar else None
             data['user'] = {
-                'user_id': self.user.id,
+                'id': self.user.id,
                 'email': self.user.email,
                 'first_name': self.user.first_name,
                 'last_name': self.user.last_name,
@@ -236,7 +240,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
             parent = self.user.parent
             children = Child.objects.filter(parent = parent)
             data['user'] = {
-                'user_id': self.user.id,
+                'id': self.user.id,
                 'email': self.user.email,
                 'first_name': self.user.first_name,
                 'last_name': self.user.last_name,
@@ -245,13 +249,13 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
                 'is_superuser': self.user.is_superuser,
                 'is_staff': self.user.is_staff
             }
-        else:
+        elif self.user.is_superuser:
             data['user'] = {
-                'user_id': self.user.id,
+                'id': self.user.id,
                 'email': self.user.email,
                 'first_name': self.user.first_name,
                 'last_name': self.user.last_name,
-                'role': self.user.role,
+                'role': 'superadmin',
                 'is_superuser': self.user.is_superuser,
                 'is_staff': self.user.is_staff
             }

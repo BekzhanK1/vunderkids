@@ -4,6 +4,7 @@ import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.core.validators import RegexValidator
+from django.conf import settings
 
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
@@ -90,7 +91,7 @@ class Student(models.Model):
         ('F', 'Female'),
         ('O', 'Other'),
     ]
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='student')
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='student', )
     school_class = models.ForeignKey(Class, on_delete=models.SET_NULL, null=True, blank=True, related_name='students')
     school = models.ForeignKey(School, on_delete=models.SET_NULL, null=True, blank=True, related_name='students')
     grade = models.IntegerField(choices=GRADE_CHOICES)
@@ -127,6 +128,12 @@ class Student(models.Model):
         else:
             self.streak = 1
         self.last_task_completed_at = now
+        self.save()
+
+    def add_question_reward(self):
+        question_reward = settings.QUESTION_REWARD
+        self.cups += question_reward
+        self.stars += question_reward
         self.save()
             
 class Parent(models.Model):
@@ -176,6 +183,12 @@ class Child(models.Model):
         else:
             self.streak = 1
         self.last_task_completed_at = now
+        self.save()
+
+    def add_question_reward(self):
+        question_reward = settings.QUESTION_REWARD
+        self.cups += question_reward
+        self.stars += question_reward
         self.save()
 
     def __str__(self):
