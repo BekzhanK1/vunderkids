@@ -7,13 +7,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = 'django-insecure-vq4uf)bbe9+0yu+_-d5v(q8sv0a03sjy0r(@fy=0(96m4brpc1'
 DEBUG = True
-ALLOWED_HOSTS = []
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://127.0.0.1:5500"
-]
+
+# CHANGE BEFORE PRODUCTION
+ALLOWED_HOSTS = ['*']
+CORS_ALLOW_ALL_ORIGINS = True
+# CORS_ALLOWED_ORIGINS = [
+#     "http://localhost:5173",
+#     "http://127.0.0.1:5173",
+#     "http://127.0.0.1:5500"
+# ]
 
 INSTALLED_APPS = [
     'django.contrib.admin',
