@@ -147,7 +147,6 @@ class StudentRegistrationSerializer(serializers.ModelSerializer):
 class StudentSerializer(serializers.ModelSerializer):
     user = UserSerializer()
     school_name = serializers.SerializerMethodField()
-    avatar_url = serializers.SerializerMethodField()
     class Meta:
         model = Student
         fields = '__all__'
@@ -155,16 +154,13 @@ class StudentSerializer(serializers.ModelSerializer):
     def get_school_name(self, obj):
         return obj.school.name if obj.school else None
     
-    def get_avatar_url(self, obj):
-        if obj.avatar:
-            return f"https://{settings.AWS_STORAGE_BUCKET_NAME}.s3.{settings.AWS_S3_REGION_NAME}.amazonaws.com/{obj.avatar.name}"
-        return None
     
 class StudentsListSerializer(serializers.ModelSerializer):
     school_name = serializers.SerializerMethodField()
     first_name = serializers.CharField(source='user.first_name')
     last_name = serializers.CharField(source='user.last_name')
     email = serializers.EmailField(source='user.email')
+    id = serializers.IntegerField(source='user.id')
 
 
     def get_school_name(self, obj):
@@ -176,12 +172,13 @@ class StudentsListSerializer(serializers.ModelSerializer):
 
 class ChildrenListSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(source='parent.user.email')
-    id = serializers.IntegerField(source='parent.user.id')
     school_name = serializers.SerializerMethodField()
+    parent_id = serializers.IntegerField(source='parent.user.id')
+
 
     class Meta:
         model = Child
-        fields = ['id', 'first_name', 'last_name', 'email', 'grade', 'school_name', 'gender']
+        fields = ['id', 'parent_id', 'first_name', 'last_name', 'email', 'grade', 'school_name', 'gender']
 
     def get_school_name(self, obj):
         return "Индивидуальный аккаунт"
@@ -189,16 +186,10 @@ class SimpleStudentSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(source='user.first_name')
     last_name = serializers.CharField(source='user.last_name')
     email = serializers.EmailField(source='user.email')
-    avatar_url = serializers.SerializerMethodField()
-
     class Meta:
         model = Student
         fields = ['id', 'first_name', 'last_name', 'email', 'grade', 'level', 'streak', 'cups', 'stars', 'gender', 'avatar', 'birth_date', 'last_task_completed_at', 'school_class', 'school']
         
-    def get_avatar_url(self, obj):
-        if obj.avatar:
-            return get_presigned_url(settings.AWS_STORAGE_BUCKET_NAME, obj.avatar)
-        return None
         
 class ChildSerializer(serializers.ModelSerializer):
     email = serializers.SerializerMethodField()
@@ -230,7 +221,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
             grade = student.grade
             avatar_url = student.avatar.url if student.avatar else None
             data['user'] = {
-                'user_id': self.user.id,
+                'id': self.user.id,
                 'email': self.user.email,
                 'first_name': self.user.first_name,
                 'last_name': self.user.last_name,
@@ -249,7 +240,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
             parent = self.user.parent
             children = Child.objects.filter(parent = parent)
             data['user'] = {
-                'user_id': self.user.id,
+                'id': self.user.id,
                 'email': self.user.email,
                 'first_name': self.user.first_name,
                 'last_name': self.user.last_name,
@@ -258,13 +249,13 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
                 'is_superuser': self.user.is_superuser,
                 'is_staff': self.user.is_staff
             }
-        else:
+        elif self.user.is_superuser:
             data['user'] = {
-                'user_id': self.user.id,
+                'id': self.user.id,
                 'email': self.user.email,
                 'first_name': self.user.first_name,
                 'last_name': self.user.last_name,
-                'role': self.user.role,
+                'role': 'superadmin',
                 'is_superuser': self.user.is_superuser,
                 'is_staff': self.user.is_staff
             }

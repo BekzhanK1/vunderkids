@@ -62,6 +62,7 @@ class Question(models.Model):
         ('drag_position', 'Drag Position'),
     ]
     task = models.ForeignKey(Task, related_name='questions', on_delete=models.CASCADE)
+    title = models.CharField(max_length=100)
     question_text = models.TextField()
     question_type = models.CharField(max_length=50, choices=QUESTION_TYPES)
     options = models.JSONField(blank=True, null=True)  # For multiple choice, mark all, drag and drop
@@ -92,6 +93,8 @@ class TaskCompletion(models.Model):
     user = models.ForeignKey(User, null=True, blank=True, related_name='completed_tasks', on_delete=models.CASCADE)
     child = models.ForeignKey(Child, null=True, blank=True, related_name='completed_tasks', on_delete=models.CASCADE)
     task = models.ForeignKey(Task, related_name='completed_by', on_delete=models.CASCADE)
+    correct = models.PositiveSmallIntegerField(default=0)
+    wrong = models.PositiveSmallIntegerField(default=0)
     completed_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

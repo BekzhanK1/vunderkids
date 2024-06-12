@@ -160,6 +160,8 @@ class ChildrenViewSet(viewsets.ModelViewSet):
 
     def create(self, request):
         parent = request.user.parent
+        if parent.children.count() >= 3:
+            return Response({"message": "You cant add more than 3 children"}, status=status.HTTP_400_BAD_REQUEST)
         data = request.data.copy()
         data['parent'] = parent.pk
         serializer = self.serializer_class(data=data)
@@ -276,7 +278,8 @@ class WeeklyProgressAPIView(APIView):
         for task_completion in task_completions:
             day = str(task_completion.completed_at.date())
             if day in daily_progress:
-                daily_progress[day] += settings.TASK_REWARD
+                questions_number = task_completion.task.questions.count()
+                daily_progress[day] += questions_number * settings.QUESTION_REWARD
         
         date_to_day = {
             (start_date + timedelta(days=i)): (start_date + timedelta(days=i)).strftime('%A')
@@ -294,16 +297,18 @@ class WeeklyProgressAPIView(APIView):
     
 class AllStudentsView(APIView):
     def get(self, request, *args, **kwargs):
-        students = Student.objects.all()
-        children = Child.objects.all()
+        students = Student.objects.all().order_by('user__first_name')
+        children = Child.objects.all().order_by('first_name')
         
         student_serializer = StudentsListSerializer(students, many=True)
         child_serializer = ChildrenListSerializer(children, many=True)
         
         combined_data = student_serializer.data + child_serializer.data
-        
-        return Response(combined_data, status=status.HTTP_200_OK)
 
+        sorted_combined_data = sorted(combined_data, key=lambda x: x['first_name'])
+        
+        return Response(sorted_combined_data, status=status.HTTP_200_OK)
+        
 
 
 
@@ -320,7 +325,6 @@ class CurrentUserView(APIView):
         if request.user.is_student:
             student = Student.objects.get(user=request.user)
             tasks_completed = request.user.completed_tasks.count()
-            avatar_url = f"http://localhost:8000{student.avatar.url}" if student.avatar else None
             data['user'] = {
                 'id': request.user.id,
                 'email': request.user.email,
@@ -328,7 +332,6 @@ class CurrentUserView(APIView):
                 'last_name': request.user.last_name,
                 'role': request.user.role,
                 'grade': student.grade,
-                'avatar': avatar_url,
                 'level': student.level,
                 'streak': student.streak,
                 'cups': student.cups,
@@ -356,7 +359,7 @@ class CurrentUserView(APIView):
                 'email': request.user.email,
                 'first_name': request.user.first_name,
                 'last_name': request.user.last_name,
-                'role': request.user.role,
+                'role': 'superadmin',
                 'is_superuser': request.user.is_superuser,
                 'is_staff': request.user.is_staff
             }
