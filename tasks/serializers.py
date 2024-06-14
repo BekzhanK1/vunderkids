@@ -6,10 +6,7 @@ from account.models import Child
 class AnswerSerializer(serializers.Serializer):
     answer = serializers.CharField()
 
-class ContentSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Content
-        fields = '__all__'
+
 
 class LessonSerializer(serializers.ModelSerializer):
     class Meta:
@@ -136,6 +133,7 @@ class TaskSerializer(serializers.ModelSerializer):
         return task_completion is not None
 
 class TaskSummarySerializer(serializers.ModelSerializer):
+    questions = QuestionSerializer(many=True, read_only=True)
     is_completed = serializers.SerializerMethodField()
     total_questions = serializers.SerializerMethodField()
     correct_questions = serializers.SerializerMethodField()
@@ -145,7 +143,7 @@ class TaskSummarySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Task
-        fields = ['id', 'title', 'description', 'section', 'order', 'progress', 'answered_questions', 'is_completed', 'total_questions', 'correct_questions', 'incorrect_questions']
+        fields = ['id', 'title', 'description', 'section', 'questions', 'order', 'progress', 'answered_questions', 'is_completed', 'total_questions', 'correct_questions', 'incorrect_questions']
 
     def get_task_completion(self, obj):
         request = self.context.get('request', None)
@@ -190,6 +188,13 @@ class TaskSummarySerializer(serializers.ModelSerializer):
     def get_is_completed(self, obj):
         task_completion = self.get_task_completion(obj)
         return task_completion is not None
+    
+
+
+class ContentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Content
+        fields = '__all__'
 
 class SectionSerializer(serializers.ModelSerializer):
     contents = ContentSerializer(many=True, read_only=True)
@@ -230,7 +235,7 @@ class SectionSummarySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Section
-        fields = ['id', 'title', 'description', 'total_tasks', 'completed_tasks', 'percentage_completed']
+        fields = ['id', 'title', 'description', 'order','total_tasks', 'completed_tasks', 'percentage_completed']
 
     def get_total_tasks(self, obj):
         return Task.objects.filter(section=obj).count()

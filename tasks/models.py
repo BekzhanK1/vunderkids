@@ -6,9 +6,12 @@ User = get_user_model()
 
 class Course(models.Model):
     name = models.CharField(max_length=255)
-    description = models.TextField()
+    description = models.TextField(blank=True, null=True)
     grade = models.IntegerField()
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    class Meta:
+        ordering = ['grade']
 
     def __str__(self):
         return f"{self.name} ({self.grade} Класс)"
@@ -16,7 +19,19 @@ class Course(models.Model):
 class Section(models.Model):
     course = models.ForeignKey(Course, related_name='sections', on_delete=models.CASCADE)
     title = models.CharField(max_length=255)
-    description = models.TextField()
+    description = models.TextField(blank=True, null=True)
+    order = models.IntegerField(default=0)
+
+
+    class Meta:
+        ordering = ['order']
+
+
+    def save(self, *args, **kwargs):
+        if self.order == 0:
+            last_order = Section.objects.filter(course=self.course).aggregate(models.Max('order'))['order__max']
+            self.order = (last_order + 1) if last_order is not None else 0
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.title
@@ -27,10 +42,11 @@ class Content(models.Model):
         ('lesson', 'Lesson'),
     )
     title = models.CharField(max_length=255)
-    description = models.TextField()
+    description = models.TextField(blank=True, null=True)
     order = models.IntegerField(default=0)
     section = models.ForeignKey(Section, related_name='contents', null=True, on_delete=models.CASCADE)
     content_type = models.CharField(max_length=10, choices=CONTENT_TYPE_CHOICES)
+    video_url = models.URLField(blank=True, null=True)
     
     def save(self, *args, **kwargs):
         if self.order == 0:
@@ -42,7 +58,6 @@ class Content(models.Model):
         return f"Content: (Section: {self.section.title} | Order: {self.order})"
 
 class Lesson(Content):
-    video_url = models.URLField(blank=True, null=True)
 
     def __str__(self):
         return f"Lesson: {self.title}"
@@ -67,7 +82,7 @@ class Question(models.Model):
     question_type = models.CharField(max_length=50, choices=QUESTION_TYPES)
     options = models.JSONField(blank=True, null=True)  # For multiple choice, mark all, drag and drop
     correct_answer = models.JSONField()  # Adjusted to JSONField to store complex answers if needed
-
+    template = models.CharField(default='1', max_length=20)
     def __str__(self):
         return f"[Task: {self.task}] {self.question_text}"
     

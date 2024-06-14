@@ -9,7 +9,7 @@ from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
-frontend_url = 'http://194.67.82.5:5173/'
+frontend_url = settings.FRONTEND_URL
 
 @shared_task
 def send_daily_email_to_all_students():

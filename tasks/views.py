@@ -51,7 +51,7 @@ class SectionViewSet(viewsets.ModelViewSet):
     permission_classes = [IsSuperUserOrStaffOrReadOnly]
 
     def get_queryset(self):
-        return Section.objects.filter(course_id=self.kwargs['course_pk']).order_by('id')
+        return Section.objects.filter(course_id=self.kwargs['course_pk']).order_by('order')
     
     def create(self, request, course_pk=None):
         data = request.data.copy()
@@ -66,6 +66,7 @@ class SectionViewSet(viewsets.ModelViewSet):
         if serializer.is_valid():
             sections = serializer.save()
             return Response(self.serializer_class(sections, many=isinstance(data, list)).data, status=status.HTTP_201_CREATED)
+        print(serializer.errors)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def get_serializer_context(self):
@@ -80,6 +81,7 @@ class ContentViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return Content.objects.filter(section_id=self.kwargs['section_pk']).order_by('order')
+    
 
     def create(self, request, course_pk=None, section_pk=None):
         data = request.data.copy()
@@ -135,6 +137,7 @@ class LessonViewSet(viewsets.ModelViewSet):
             return Response(self.serializer_class(lessons, many=isinstance(data, list)).data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
+
     def get_serializer_context(self):
         context = super().get_serializer_context()
         context.update({"request": self.request})
@@ -155,6 +158,7 @@ class TaskViewSet(viewsets.ModelViewSet):
 
     def create(self, request, course_pk=None, section_pk=None):
         data = request.data.copy()
+        print(data)
         if isinstance(data, list):
             for item in data:
                 item['section'] = section_pk
@@ -177,7 +181,7 @@ class TaskViewSet(viewsets.ModelViewSet):
 class QuestionViewSet(viewsets.ModelViewSet):
     queryset = Question.objects.all()
     serializer_class = QuestionSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsSuperUserOrStaffOrReadOnly]
 
     def get_queryset(self):
         return Question.objects.filter(task_id=self.kwargs['task_pk'])

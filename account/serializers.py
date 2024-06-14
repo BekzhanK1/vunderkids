@@ -97,10 +97,7 @@ class SchoolSerializer(serializers.ModelSerializer):
         return Student.objects.filter(school=obj).count()
         
         
-class ClassSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Class
-        fields = '__all__'
+
 
 
 class StudentRegistrationSerializer(serializers.ModelSerializer):
@@ -111,10 +108,11 @@ class StudentRegistrationSerializer(serializers.ModelSerializer):
     school = serializers.PrimaryKeyRelatedField(queryset=School.objects.all(), write_only=True)
     grade = serializers.IntegerField()
     school_class = serializers.PrimaryKeyRelatedField(queryset=Class.objects.all(), write_only=True)
+    gender = serializers.CharField()
     
     class Meta:
         model = Student
-        fields = ('email', 'first_name', 'last_name', 'phone_number', 'school', 'school_class', 'grade')
+        fields = ('email', 'first_name', 'last_name', 'phone_number', 'school', 'school_class', 'grade', 'gender')
 
     def validate_email(self, value):
         try:
@@ -130,6 +128,7 @@ class StudentRegistrationSerializer(serializers.ModelSerializer):
         school = validated_data.pop('school')
         school_class = validated_data.pop('school_class')
         grade = validated_data.pop('grade')
+        gender = validated_data.pop('gender')
         # Create user
         user_data = {
             key: validated_data.pop(key) for key in ['email', 'first_name', 'last_name', 'phone_number']
@@ -141,7 +140,7 @@ class StudentRegistrationSerializer(serializers.ModelSerializer):
         send_activation_email.delay(user.id, password)
 
         # Create student associated with this user
-        student = Student.objects.create(user=user, school = school, school_class = school_class, grade = grade, **validated_data)
+        student = Student.objects.create(user=user, school = school, school_class = school_class, grade = grade, gender=gender, **validated_data)
         return student
     
 class StudentSerializer(serializers.ModelSerializer):
@@ -189,7 +188,12 @@ class SimpleStudentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Student
         fields = ['id', 'first_name', 'last_name', 'email', 'grade', 'level', 'streak', 'cups', 'stars', 'gender', 'avatar', 'birth_date', 'last_task_completed_at', 'school_class', 'school']
-        
+
+
+class ClassSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Class
+        fields = '__all__'     
         
 class ChildSerializer(serializers.ModelSerializer):
     email = serializers.SerializerMethodField()
