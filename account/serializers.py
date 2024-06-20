@@ -126,7 +126,8 @@ class ParentSerializer(serializers.ModelSerializer):
         fields = '__all__'
     
 class SchoolSerializer(serializers.ModelSerializer):
-    student_number = serializers.SerializerMethodField()
+    student_number = serializers.SerializerMethodField(read_only=True)
+    supervisor = UserSerializer(read_only=True)
     class Meta:
         model = School
         fields = '__all__'

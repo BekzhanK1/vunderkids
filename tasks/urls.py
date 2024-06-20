@@ -1,5 +1,6 @@
+from django.urls import path
 from rest_framework_nested import routers
-from .views import CourseViewSet, SectionViewSet, LessonViewSet, ContentViewSet, TaskViewSet, QuestionViewSet
+from .views import CourseViewSet, PlayGameView, SectionViewSet, LessonViewSet, ContentViewSet, TaskViewSet, QuestionViewSet
 
 router = routers.DefaultRouter()
 router.register(r'courses', CourseViewSet)
@@ -15,5 +16,10 @@ sections_router.register(r'tasks', TaskViewSet, basename='section-tasks')
 tasks_router = routers.NestedSimpleRouter(sections_router, r'tasks', lookup='task')
 tasks_router.register(r'questions', QuestionViewSet, basename='task-questions')
 
-urlpatterns = router.urls + courses_router.urls + sections_router.urls + tasks_router.urls
+
+urlpatterns = [
+    path('play-game/', PlayGameView.as_view(), name='play-game'),
+]
+
+urlpatterns += router.urls + courses_router.urls + sections_router.urls + tasks_router.urls
 

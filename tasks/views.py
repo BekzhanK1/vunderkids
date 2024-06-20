@@ -7,6 +7,7 @@ from account.permissions import IsSuperUserOrStaffOrReadOnly
 from account.models import Student, Child
 from .models import Answer, Course, Image, Section, Lesson, Content, Task, Question, TaskCompletion
 from .serializers import CourseSerializer, SectionSerializer, LessonSerializer, ContentSerializer, TaskSerializer, QuestionSerializer, TaskSummarySerializer
+from rest_framework.views import APIView
 
 
 class CourseViewSet(viewsets.ModelViewSet):
@@ -291,3 +292,31 @@ class QuestionViewSet(viewsets.ModelViewSet):
             "message": "Answer processed, reward is given",
             "is_correct": is_correct
         }
+
+
+
+
+class PlayGameView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        child_id = request.data.get('child_id', None)
+
+        if user.is_student:
+            student = get_object_or_404(Student, user=user)
+            if student.stars < 500:
+                return Response({"message": "Not enough stars"}, status=status.HTTP_400_BAD_REQUEST)
+            student.stars -= 500
+            student.save()
+            return Response({"message": "500 stars have been deducted"}, status=status.HTTP_200_OK)
+        
+        elif user.is_parent and child_id:
+            child = get_object_or_404(Child, parent=user.parent, pk=child_id)
+            if child.stars < 500:
+                return Response({"message": "Not enough stars"}, status=status.HTTP_400_BAD_REQUEST)
+            child.stars -= 500
+            child.save()
+            return Response({"message": "500 stars have been deducted from the child"}, status=status.HTTP_200_OK)
+        
+        return Response({"message": "Invalid request. Parent must provide child_id."}, status=status.HTTP_400_BAD_REQUEST)
