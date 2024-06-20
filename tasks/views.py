@@ -122,7 +122,6 @@ class LessonViewSet(viewsets.ModelViewSet):
     
     def create(self, request, course_pk=None, section_pk=None):
         data = request.data.copy()
-
         if isinstance(data, list):
             for item in data:
                 item['section'] = section_pk
@@ -223,7 +222,7 @@ class QuestionViewSet(viewsets.ModelViewSet):
         return Response(result, status=status.HTTP_200_OK)
 
     def validate_answer(self, question, answer):
-        if question.question_type in ['multiple_choice', 'true_false', 'drag_and_drop', 'drag_position', 'number_line']:
+        if question.question_type in ['multiple_choice_text', 'true_false', 'drag_and_drop', 'drag_position', 'number_line']:
             return answer == question.correct_answer
         elif question.question_type == 'mark_all':
             return set(answer) == set(question.correct_answer)

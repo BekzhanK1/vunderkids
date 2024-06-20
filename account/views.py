@@ -109,6 +109,124 @@ class SchoolViewSet(viewsets.ModelViewSet):
             school = serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+
+    @action(detail=True, methods=['post'])
+    def assign_supervisor(self, request, pk=None):
+        school = self.get_object()
+
+        if school.supervisor:
+            return Response({"message": "School already has a supervisor"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        data = request.data.copy()
+
+
+        serializer = SupervisorRegistrationSerializer(data=data)
+        if serializer.is_valid():
+            supervisor = serializer.save()
+            school.supervisor = supervisor
+            school.save()
+            return Response({
+                "message": "Staff user is registered successfully",
+                "supervisor_id": supervisor.pk
+            }, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=True, methods=['get'])
+    def deassign_supervisor(self, request, pk=None):
+        school = self.get_object()
+        if school.supervisor is None:
+            return Response({"message": "School doesn't have a supervisor"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        supervisor = school.supervisor
+        supervisor.delete()
+        school.supervisor = None
+        school.save()
+        return Response({"message": "Supervisor has been deleted from the school"}, status=status.HTTP_200_OK)
+
+
+
+class SupervisorSchoolViewset(viewsets.ReadOnlyModelViewSet):
+    queryset = School.objects.all()
+    permission_classes = [IsSupervisor]
+    serializer_class = SchoolSerializer
+
+    def get_queryset(self):
+        return School.objects.filter(supervisor=self.request.user)
+    
+    @action(detail=False, methods=['get'], url_path='school')
+    def my_school(self, request):
+        school = get_object_or_404(School, supervisor=request.user)
+        serializer = SchoolSerializer(school)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    @action(detail=False, methods=['get'], url_path='classes')
+    def my_classes(self, request):
+        school = get_object_or_404(School, supervisor=request.user)
+        classes = Class.objects.filter(school=school)
+        serializer = ClassSerializer(classes, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    @action(detail=False, methods=['get'], url_path='classes/(?P<class_pk>[^/.]+)')
+    def my_class(self, request, pk=None, class_pk=None):
+        school = get_object_or_404(School, supervisor=request.user)
+        school_class = get_object_or_404(Class, pk=class_pk, school=school)
+        serializer = ClassSerializer(school_class)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    @action(detail=False, methods=['get'], url_path='classes/(?P<class_pk>[^/.]+)/students')
+    def students_of_class(self, request, class_pk=None):
+        school = get_object_or_404(School, supervisor=request.user)
+        school_class = get_object_or_404(Class, pk=class_pk, school=school)
+        students = Student.objects.filter(school_class=school_class).order_by('-cups')
+        serializer = StudentSerializer(students, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    @action(detail=False, methods=['get'], url_path='students/(?P<student_pk>[^/.]+)')
+    def student_of_class(self, request, class_pk=None, student_pk=None):
+        school = get_object_or_404(School, supervisor=request.user)
+        student = get_object_or_404(Student, pk=student_pk, school=school)
+        serializer = StudentSerializer(student)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['get'], url_path='students/(?P<student_pk>[^/.]+)/progress')
+    def student_progress(self, request, student_pk=None):
+        student = get_object_or_404(Student, pk=student_pk)
+        
+        today = timezone.now().date()
+        start_date = today - timedelta(days=6)
+
+        task_completions = TaskCompletion.objects.filter(user=student.user, completed_at__date__gte=start_date, completed_at__date__lte=today)
+        daily_progress = {str(start_date + timedelta(days=i)): 0 for i in range(7)}
+        
+        for task_completion in task_completions:
+            day = str(task_completion.completed_at.date())
+            if day in daily_progress:
+                correct_questions_number = task_completion.correct
+                daily_progress[day] += correct_questions_number * settings.QUESTION_REWARD
+        
+        date_to_day = {
+            (start_date + timedelta(days=i)): (start_date + timedelta(days=i)).strftime('%A')
+            for i in range(7)
+        }
+        
+        response_data = {
+            "weekly_progress": [
+                {"day": date_to_day[datetime.strptime(date, "%Y-%m-%d").date()], "cups": cups}
+                for date, cups in daily_progress.items()
+            ]
+        }
+        
+        return Response(response_data, status=status.HTTP_200_OK)
+
+
+    @action(detail=False, methods=['get'], url_path='top-students')
+    def top_students(self, request):
+        school = get_object_or_404(School, supervisor=request.user)
+        top_students = Student.objects.filter(school=school).order_by('-cups')[:10]
+        serializer = StudentSerializer(top_students, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+ 
 
 class ClassViewSet(viewsets.ModelViewSet):
     serializer_class = ClassSerializer
@@ -278,8 +396,8 @@ class WeeklyProgressAPIView(APIView):
         for task_completion in task_completions:
             day = str(task_completion.completed_at.date())
             if day in daily_progress:
-                questions_number = task_completion.task.questions.count()
-                daily_progress[day] += questions_number * settings.QUESTION_REWARD
+                correct_questions_number = task_completion.correct
+                daily_progress[day] += correct_questions_number * settings.QUESTION_REWARD
         
         date_to_day = {
             (start_date + timedelta(days=i)): (start_date + timedelta(days=i)).strftime('%A')
@@ -350,6 +468,17 @@ class CurrentUserView(APIView):
                 'last_name': request.user.last_name,
                 'role': request.user.role,
                 'children': ChildSerializer(children, many=True).data,
+                'is_superuser': request.user.is_superuser,
+                'is_staff': request.user.is_staff
+            }
+
+        elif request.user.is_supervisor:
+            data['user'] = {
+                'id': request.user.id,
+                'email': request.user.email,
+                'first_name': request.user.first_name,
+                'last_name': request.user.last_name,
+                'role': request.user.role,
                 'is_superuser': request.user.is_superuser,
                 'is_staff': request.user.is_staff
             }

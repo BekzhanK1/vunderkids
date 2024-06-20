@@ -9,8 +9,12 @@ children_router.register(r'children', ChildrenViewSet, basename='children')
 
 
 
+supervisor_school_router = SimpleRouter()
+supervisor_school_router.register(r'supervisor_school', SupervisorSchoolViewset, basename='supervisor_school')
+
 router = DefaultRouter()
 router.register(r'schools', SchoolViewSet)
+
 
 # Creating nested routing for classes within schools
 schools_router = routers.NestedSimpleRouter(router, r'schools', lookup='school')
@@ -24,6 +28,7 @@ urlpatterns = [
     path('login/', MyTokenObtainPairView.as_view()),
     path('token/refresh/', TokenRefreshView.as_view()),
     path('current-user/', CurrentUserView.as_view()),
+    path('', include(supervisor_school_router.urls)),
     path('', include(children_router.urls)),
     path('', include(router.urls)),
     path('', include(schools_router.urls)),

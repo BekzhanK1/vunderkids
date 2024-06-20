@@ -35,6 +35,44 @@ class StaffRegistrationSerializer(serializers.ModelSerializer):
         send_activation_email.delay(user.id, password)
         user.save()
         return user
+    
+
+class SupervisorRegistrationSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField()
+    first_name = serializers.CharField()
+    last_name = serializers.CharField()
+    phone_number = serializers.CharField()
+
+    class Meta:
+        model = User
+        fields = ['email', 'first_name', 'last_name', 'phone_number']
+
+    def validate_email(self, value):
+        try:
+            validate_email(value)
+        except DjangoValidationError:
+            raise serializers.ValidationError("Invalid email format.")
+        
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("A user with that email already exists.")
+        return value
+
+    def create(self, validated_data):
+        password = generate_password()
+        user = User.objects.create_user(
+            email=validated_data['email'],
+            phone_number=validated_data.get('phone_number', ''),
+            first_name=validated_data['first_name'],
+            last_name=validated_data['last_name'],
+            role='supervisor',
+            password = password,
+            is_staff=False
+        )
+        user.set_password(password)
+        user.save()
+        send_activation_email.delay(user.id, password)
+
+        return user
 
         
 
@@ -260,6 +298,16 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
                 'first_name': self.user.first_name,
                 'last_name': self.user.last_name,
                 'role': 'superadmin',
+                'is_superuser': self.user.is_superuser,
+                'is_staff': self.user.is_staff
+            }
+        elif self.user.is_supervisor:
+            data['user'] = {
+                'id': self.user.id,
+                'email': self.user.email,
+                'first_name': self.user.first_name,
+                'last_name': self.user.last_name,
+                'role': self.user.role,
                 'is_superuser': self.user.is_superuser,
                 'is_staff': self.user.is_staff
             }

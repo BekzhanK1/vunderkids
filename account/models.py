@@ -32,6 +32,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     ROLE_CHOICES = (
         ('student', 'Student'),
         ('parent', 'Parent'),
+        ('supervisor', 'Supervisor'),  # Added 'supervisor' role
     )
     email = models.EmailField(unique=True, db_index=True)
     first_name = models.CharField(max_length=30)
@@ -57,10 +58,15 @@ class User(AbstractBaseUser, PermissionsMixin):
     def is_parent(self):
         return self.role == 'parent'
 
+    @property
+    def is_supervisor(self):
+        return self.role == 'supervisor'  # Added 'is_supervisor' property
+
 class School(models.Model):
     name = models.CharField(max_length=150)
     city = models.CharField(max_length=150)
     email = models.EmailField(unique=False)
+    supervisor = models.OneToOneField(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='school')
 
     def __str__(self):
         return f"{self.name} ({self.city})"
@@ -105,7 +111,7 @@ class Student(models.Model):
     last_task_completed_at = models.DateTimeField(null=True, blank = True)
 
     def __str__(self):
-        return f"[Student] {self.user.first_name} {self.user.last_name}"
+        return f"[Student: {self.pk}] {self.user.first_name} {self.user.last_name}"
     
     def update_level(self):
         level_requirements = LevelRequirement.objects.order_by('level')
