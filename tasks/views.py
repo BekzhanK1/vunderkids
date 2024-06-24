@@ -158,7 +158,6 @@ class TaskViewSet(viewsets.ModelViewSet):
 
     def create(self, request, course_pk=None, section_pk=None):
         data = request.data.copy()
-        print(data)
         if isinstance(data, list):
             for item in data:
                 item['section'] = section_pk
@@ -172,6 +171,16 @@ class TaskViewSet(viewsets.ModelViewSet):
             tasks = serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+    
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -188,6 +197,7 @@ class QuestionViewSet(viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         data = request.data
+        print(data)
 
         if isinstance(data, list):
             for item in data:
@@ -199,6 +209,7 @@ class QuestionViewSet(viewsets.ModelViewSet):
         if serializer.is_valid():
             questions = serializer.save()
             return Response(self.serializer_class(questions, many=isinstance(data, list)).data, status=status.HTTP_201_CREATED)
+        print(serializer.errors)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=True, methods=['post'], url_path='answer', permission_classes=[IsAuthenticated])

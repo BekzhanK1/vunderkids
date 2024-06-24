@@ -82,7 +82,7 @@ class Question(models.Model):
     question_type = models.CharField(max_length=50, choices=QUESTION_TYPES)
     options = models.JSONField(blank=True, null=True)  # For multiple choice, mark all, drag and drop
     correct_answer = models.JSONField()  # Adjusted to JSONField to store complex answers if needed
-    template = models.CharField(default='1', max_length=20)
+    template = models.CharField(default='1', max_length=20, blank=True, null=True)
     def __str__(self):
         return f"[Task: {self.task}] {self.question_text}"
     
