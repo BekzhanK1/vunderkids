@@ -192,9 +192,26 @@ class TaskSummarySerializer(serializers.ModelSerializer):
 
 
 class ContentSerializer(serializers.ModelSerializer):
+    is_completed = serializers.SerializerMethodField()
+
     class Meta:
         model = Content
         fields = '__all__'
+
+    def get_is_completed(self, obj):
+        request = self.context.get('request', None)
+        if not request:
+            return None
+        
+        if obj.content_type == "task":
+            return TaskCompletion.objects.filter(user=request.user, task=obj.task).exists()
+        return None
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        if instance.content_type != "task":
+            representation.pop('is_completed', None)
+        return representation
 
 class SectionSerializer(serializers.ModelSerializer):
     contents = ContentSerializer(many=True, read_only=True)

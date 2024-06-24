@@ -198,5 +198,5 @@ class Child(models.Model):
         self.save()
 
     def __str__(self):
-        return f"[Child] {self.first_name} {self.last_name}"
+        return f"[Child: {self.pk}] {self.first_name} {self.last_name}"
     

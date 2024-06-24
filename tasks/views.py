@@ -234,6 +234,8 @@ class QuestionViewSet(viewsets.ModelViewSet):
         return Response(result, status=status.HTTP_200_OK)
 
     def validate_answer(self, question, answer):
+        print(f"Answer: {answer}")
+        print(f"Correct Answer: {question.correct_answer}")
         if question.question_type in ['multiple_choice_text', 'true_false', 'drag_and_drop', 'drag_position', 'number_line']:
             return answer == question.correct_answer
         elif question.question_type == 'mark_all':
@@ -312,7 +314,7 @@ class PlayGameView(APIView):
 
     def get(self, request):
         user = request.user
-        child_id = request.data.get('child_id', None)
+        child_id = request.GET.get('child_id', None)
 
         if user.is_student:
             student = get_object_or_404(Student, user=user)
