@@ -87,6 +87,7 @@ class Question(models.Model):
         return f"[Task: {self.task}] {self.question_text}"
     
 class Image(models.Model):
+    option_id = models.PositiveIntegerField(default=0, blank=True, null=True)
     image = models.ImageField(upload_to='questions/')
     question = models.ForeignKey(Question, related_name='images', on_delete=models.CASCADE)
     

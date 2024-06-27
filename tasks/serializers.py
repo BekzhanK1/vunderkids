@@ -66,12 +66,21 @@ class QuestionSerializer(serializers.ModelSerializer):
             child = get_object_or_404(Child, parent=user.parent, pk=child_id)
             return Answer.objects.filter(child=child, question=obj, is_correct=True).exists()
         return False
-    
+
     def create(self, validated_data):
-        images_data = self.context['request'].FILES.getlist('images')
+        images_data = self.context.get('request').FILES
         question = Question.objects.create(**validated_data)
-        for image_data in images_data:
-            Image.objects.create(question=question, image=image_data)
+
+        for key in images_data:
+            if 'image_' in key:
+                option_id = key.split('_')[1]  # Expecting the key to be formatted as 'image_OPTIONID'
+                image_file = images_data[key]
+                Image.objects.create(
+                    question=question,
+                    image=image_file,
+                    option_id=option_id
+                )
+
         return question
 
 
