@@ -113,6 +113,7 @@ class ParentRegistrationSerializer(serializers.ModelSerializer):
         password = validated_data.pop('password')
         user.set_password(password)
         user.save()
+        print(user.id, password)
         send_activation_email.delay(user.id, password)
 
         # Create parent profile

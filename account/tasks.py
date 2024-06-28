@@ -49,6 +49,7 @@ def send_daily_email_to_all_parents():
 @shared_task
 def send_activation_email(user_id, password):
     user = User.objects.get(pk=user_id)
+    print(user)
     activation_url = f"{frontend_url}activate/{user.activation_token}/"
     context = {'user': user, 'activation_url': activation_url, 'password': password}
     subject = 'Activate your Vunderkids Account'
