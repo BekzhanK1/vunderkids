@@ -68,18 +68,19 @@ class QuestionSerializer(serializers.ModelSerializer):
         return False
 
     def create(self, validated_data):
-        images_data = self.context.get('request').FILES
         question = Question.objects.create(**validated_data)
 
-        for key in images_data:
-            if 'image_' in key:
-                option_id = key.split('_')[1]  # Expecting the key to be formatted as 'image_OPTIONID'
-                image_file = images_data[key]
-                Image.objects.create(
-                    question=question,
-                    image=image_file,
-                    option_id=option_id
-                )
+        if question.question_type == 'multiple_choice_images':
+            images_data = self.context.get('request').FILES
+            for key in images_data:
+                if 'image_' in key:
+                    option_id = key.split('_')[1]  # Expecting the key to be formatted as 'image_OPTIONID'
+                    image_file = images_data[key]
+                    Image.objects.create(
+                        question=question,
+                        image=image_file,
+                        option_id=option_id
+                    )
 
         return question
 
