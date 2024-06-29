@@ -4,6 +4,7 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ObjectDoesNotExist
 from account.models import *
 from .tasks import send_activation_email
 from .utils import generate_password, get_presigned_url
@@ -113,7 +114,6 @@ class ParentRegistrationSerializer(serializers.ModelSerializer):
         password = validated_data.pop('password')
         user.set_password(password)
         user.save()
-        print(user.id, password)
         send_activation_email.delay(user.id, password)
 
         # Create parent profile
@@ -253,65 +253,66 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user):
         token = super().get_token(user)
-
-
+        # Add any additional token customization here if needed
         return token
 
     def validate(self, attrs):
         data = super().validate(attrs)
 
-        if self.user.is_student:
-            student = Student.objects.get(user=self.user)
-            grade = student.grade
-            avatar_url = student.avatar.url if student.avatar else None
-            data['user'] = {
-                'id': self.user.id,
-                'email': self.user.email,
-                'first_name': self.user.first_name,
-                'last_name': self.user.last_name,
-                'role': self.user.role,
-                'grade': grade,
-                'avatar': avatar_url,
-                'level': student.level,
-                'streak': student.streak,
-                'cups': student.cups,
-                'stars': student.stars,
-                'is_superuser': self.user.is_superuser,
-                'is_staff': self.user.is_staff
-
-            }
-        elif self.user.is_parent:
-            parent = self.user.parent
-            children = Child.objects.filter(parent = parent)
-            data['user'] = {
-                'id': self.user.id,
-                'email': self.user.email,
-                'first_name': self.user.first_name,
-                'last_name': self.user.last_name,
-                'role': self.user.role,
-                'children': ChildSerializer(children, many=True).data,
-                'is_superuser': self.user.is_superuser,
-                'is_staff': self.user.is_staff
-            }
-        elif self.user.is_superuser:
-            data['user'] = {
-                'id': self.user.id,
-                'email': self.user.email,
-                'first_name': self.user.first_name,
-                'last_name': self.user.last_name,
-                'role': 'superadmin',
-                'is_superuser': self.user.is_superuser,
-                'is_staff': self.user.is_staff
-            }
-        elif self.user.is_supervisor:
-            data['user'] = {
-                'id': self.user.id,
-                'email': self.user.email,
-                'first_name': self.user.first_name,
-                'last_name': self.user.last_name,
-                'role': self.user.role,
-                'is_superuser': self.user.is_superuser,
-                'is_staff': self.user.is_staff
-            }
+        try:
+            if self.user.is_student:
+                student = Student.objects.get(user=self.user)
+                grade = student.grade
+                avatar_url = student.avatar.url if student.avatar else None
+                data['user'] = {
+                    'id': self.user.id,
+                    'email': self.user.email,
+                    'first_name': self.user.first_name,
+                    'last_name': self.user.last_name,
+                    'role': self.user.role,
+                    'grade': grade,
+                    'avatar': avatar_url,
+                    'level': student.level,
+                    'streak': student.streak,
+                    'cups': student.cups,
+                    'stars': student.stars,
+                    'is_superuser': self.user.is_superuser,
+                    'is_staff': self.user.is_staff
+                }
+            elif self.user.is_parent:
+                parent = self.user.parent
+                children = Child.objects.filter(parent=parent)
+                data['user'] = {
+                    'id': self.user.id,
+                    'email': self.user.email,
+                    'first_name': self.user.first_name,
+                    'last_name': self.user.last_name,
+                    'role': self.user.role,
+                    'children': ChildSerializer(children, many=True).data,
+                    'is_superuser': self.user.is_superuser,
+                    'is_staff': self.user.is_staff
+                }
+            elif self.user.is_superuser:
+                data['user'] = {
+                    'id': self.user.id,
+                    'email': self.user.email,
+                    'first_name': self.user.first_name,
+                    'last_name': self.user.last_name,
+                    'role': 'superadmin',
+                    'is_superuser': self.user.is_superuser,
+                    'is_staff': self.user.is_staff
+                }
+            elif self.user.is_supervisor:
+                data['user'] = {
+                    'id': self.user.id,
+                    'email': self.user.email,
+                    'first_name': self.user.first_name,
+                    'last_name': self.user.last_name,
+                    'role': self.user.role,
+                    'is_superuser': self.user.is_superuser,
+                    'is_staff': self.user.is_staff
+                }
+        except ObjectDoesNotExist as e:
+            raise serializers.ValidationError("User data could not be retrieved.")  # Customize error message as needed
 
         return data

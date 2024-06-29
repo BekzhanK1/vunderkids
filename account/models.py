@@ -6,6 +6,17 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, Permis
 from django.core.validators import RegexValidator
 from django.conf import settings
 
+
+GRADE_CHOICES = [(i, str(i)) for i in range(0, 5)]
+SECTION_CHOICES = [(chr(i), chr(i)) for i in range(ord('А'), ord('Я') + 1)]
+GENDER_CHOICES = [
+        ('M', 'Male'),
+        ('F', 'Female'),
+        ('O', 'Other'),
+    ]
+
+
+
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
         if not email:
@@ -72,9 +83,6 @@ class School(models.Model):
         return f"{self.name} ({self.city})"
 
 class Class(models.Model):
-    GRADE_CHOICES = [(i, str(i)) for i in range(0, 13)]
-    SECTION_CHOICES = [(chr(i), chr(i)) for i in range(ord('A'), ord('H'))]
-
     school = models.ForeignKey(School, on_delete=models.CASCADE, related_name='classes')
     grade = models.IntegerField(choices=GRADE_CHOICES)
     section = models.CharField(max_length=1, choices=SECTION_CHOICES)
@@ -91,12 +99,6 @@ class LevelRequirement(models.Model):
         return f'Level {self.level}: {self.cups_required} cups'
 
 class Student(models.Model):
-    GRADE_CHOICES = [(i, str(i)) for i in range(0, 13)]
-    GENDER_CHOICES = [
-        ('M', 'Male'),
-        ('F', 'Female'),
-        ('O', 'Other'),
-    ]
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='student', )
     school_class = models.ForeignKey(Class, on_delete=models.SET_NULL, null=True, blank=True, related_name='students')
     school = models.ForeignKey(School, on_delete=models.SET_NULL, null=True, blank=True, related_name='students')
@@ -149,12 +151,6 @@ class Parent(models.Model):
         return f"[Parent] {self.user.first_name} {self.user.last_name}"
 
 class Child(models.Model):
-    GRADE_CHOICES = [(i, str(i)) for i in range(0, 13)]
-    GENDER_CHOICES = [
-        ('M', 'Male'),
-        ('F', 'Female'),
-        ('O', 'Other'),
-    ]
     parent = models.ForeignKey(Parent, on_delete=models.CASCADE, related_name='children')
     first_name = models.CharField(max_length=30)
     last_name = models.CharField(max_length=150)
