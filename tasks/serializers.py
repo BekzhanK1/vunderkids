@@ -214,7 +214,17 @@ class ContentSerializer(serializers.ModelSerializer):
             return None
         
         if obj.content_type == "task":
-            return TaskCompletion.objects.filter(user=request.user, task=obj.task).exists()
+            user = request.user
+            child_id = request.query_params.get('child_id')
+
+            if user.is_student:
+                return TaskCompletion.objects.filter(user=user, task=obj).first()
+            elif user.is_parent and child_id:
+                child = get_object_or_404(Child, parent=user.parent, pk=child_id)
+                return TaskCompletion.objects.filter(child=child, task=obj).first()
+            else:
+                return None
+        
         return None
 
     def to_representation(self, instance):

@@ -169,7 +169,7 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 
 QUESTION_REWARD = 5
-FRONTEND_URL = "http://localhost/"
+FRONTEND_URL = "http://85.198.90.24/"
 
 
 
