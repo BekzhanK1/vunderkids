@@ -236,10 +236,10 @@ class QuestionViewSet(viewsets.ModelViewSet):
     def validate_answer(self, question, answer):
         print(f"Answer: {answer}")
         print(f"Correct Answer: {question.correct_answer}")
-        if question.question_type in ['multiple_choice_text', 'true_false', 'drag_and_drop', 'drag_position', 'number_line']:
+        if question.question_type in ['multiple_choice_text','multiple_choice_images', 'true_false', 'drag_position', 'number_line']:
             return int(answer) == question.correct_answer
-        elif question.question_type == 'multiple_choice_images':
-            return int(answer) == question.correct_answer
+        elif question.question_type in ['drag_and_drop_text', 'drag_and_drop_images']:
+            return answer == question.correct_answer
         elif question.question_type == 'mark_all':
             return set(answer) == set(question.correct_answer)
         return False
