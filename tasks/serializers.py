@@ -19,9 +19,15 @@ class LessonSummarySerializer(serializers.ModelSerializer):
         fields = ['id', 'title', 'description', 'video_url', 'text', 'order']
 
 class ImageSerializer(serializers.ModelSerializer):
+    id = serializers.SerializerMethodField()
     class Meta:
         model = Image
         fields = ['id', 'image']
+
+    def get_id(self, obj):
+        return obj.option_id
+
+    
 
 class QuestionSerializer(serializers.ModelSerializer):
     is_attempted = serializers.SerializerMethodField()

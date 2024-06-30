@@ -54,6 +54,11 @@ class SectionViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return Section.objects.filter(course_id=self.kwargs['course_pk']).order_by('order')
     
+    def list(self, request, course_pk=None):
+        queryset = self.get_queryset()
+        serializer = self.serializer_class(queryset, many=True)
+        return Response(serializer.data)
+    
     def create(self, request, course_pk=None):
         data = request.data.copy()
 
