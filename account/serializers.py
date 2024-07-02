@@ -271,6 +271,8 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
                     'last_name': self.user.last_name,
                     'role': self.user.role,
                     'grade': grade,
+                    'gender': student.gender,
+                    'language': student.language,
                     'avatar': avatar_url,
                     'level': student.level,
                     'streak': student.streak,

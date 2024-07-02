@@ -261,6 +261,7 @@ class StudentViewSet(viewsets.ModelViewSet):
         data['school'] = school_id
         data['school_class'] = class_id
         data['grade'] = school_class.grade
+        data['language'] = school_class.language
 
         serializer = StudentRegistrationSerializer(data=data)
         if serializer.is_valid():
@@ -450,6 +451,8 @@ class CurrentUserView(APIView):
                 'last_name': request.user.last_name,
                 'role': request.user.role,
                 'grade': student.grade,
+                'gender': student.gender,
+                'language': student.language,
                 'level': student.level,
                 'streak': student.streak,
                 'cups': student.cups,
@@ -494,3 +497,57 @@ class CurrentUserView(APIView):
             }
 
         return Response(data)
+    
+class UserUpdateView(APIView):
+    def patch(self, request):
+        data = request.data
+        user = request.user
+        child_id = request.query_params.get('child_id', None)
+
+        if not child_id:
+            updated = False
+            if 'first_name' in data and data['first_name'] != user.first_name:
+                user.first_name = data['first_name']
+                updated = True
+            if 'last_name' in data and data['last_name'] != user.last_name:
+                user.last_name = data['last_name']
+                updated = True
+            if 'phone_number' in data and data['phone_number'] != user.phone_number:
+                user.phone_number = data['phone_number']
+                updated = True
+
+            if user.is_student:
+                student = user.student
+                if 'language' in data and data['language'] != student.language:
+                    student.language = data['language']
+                    student.save()
+                    updated = True
+                if 'avatar' in data and data['avatar'] != student.avatar:
+                    student.avatar = data['avatar']
+                    student.save()
+                    updated = True
+            
+            if updated:
+                user.save()
+
+        else:
+            child = get_object_or_404(Child, pk=child_id, parent=user.parent)
+            updated = False
+
+            if 'first_name' in data and data['first_name'] != child.first_name:
+                child.first_name = data['first_name']
+                updated = True
+            if 'last_name' in data and data['last_name'] != child.last_name:
+                child.last_name = data['last_name']
+                updated = True
+            if 'grade' in data and data['grade'] != child.grade:
+                child.grade = data['grade']
+                updated = True
+            if 'avatar' in data and data['avatar'] != child.avatar:
+                child.avatar = data['avatar']
+                updated = True
+
+            if updated:
+                child.save()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
