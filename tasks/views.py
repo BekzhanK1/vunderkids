@@ -201,7 +201,7 @@ class QuestionViewSet(viewsets.ModelViewSet):
         return Question.objects.filter(task_id=self.kwargs['task_pk'])
 
     def create(self, request, *args, **kwargs):
-        data = request.data
+        data = request.data.copy()
         print(data)
 
         if isinstance(data, list):
