@@ -20,12 +20,16 @@ class LessonSummarySerializer(serializers.ModelSerializer):
 
 class ImageSerializer(serializers.ModelSerializer):
     id = serializers.SerializerMethodField()
+    value = serializers.SerializerMethodField()
     class Meta:
         model = Image
-        fields = ['id', 'image']
+        fields = ['id', 'value']
 
     def get_id(self, obj):
         return obj.option_id
+    
+    def get_value(self, obj):
+        return obj.image.url
 
     
 
@@ -37,14 +41,7 @@ class QuestionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Question
         fields = '__all__'
-
-    def get_options(self, obj):
-        if obj.question_type in ['multiple_choice_images', 'drag_and_drop_images']:
-            # Return options with images embedded
-            return [{'id': opt['id'], 'image': opt['image']} for opt in obj.options]
-        else:
-            # For other question types, just return the regular options field
-            return obj.options       
+       
 
     def get_is_attempted(self, obj):
         request = self.context.get('request', None)
@@ -96,18 +93,63 @@ class QuestionSerializer(serializers.ModelSerializer):
                         image=image_file,
                         option_id=option_id
                     )
-                    options.append({'id': option_id, 'image': image.image.url})
+                    options.append({'id': option_id, 'value': image.image.url})
             question.options = options
             question.save()
 
         return question
     
+
+    def update(self, instance, validated_data):
+        instance.title = validated_data.get('title', instance.title)
+        instance.question_text = validated_data.get('question_text', instance.question_text)
+        instance.question_type = validated_data.get('question_type', instance.question_type)
+        instance.correct_answer = validated_data.get('correct_answer', instance.correct_answer)
+        instance.template = validated_data.get('template', instance.template)
+
+        if 'audio' in validated_data:
+            instance.audio = validated_data['audio']
+
+        if instance.question_type in ['multiple_choice_images', 'drag_and_drop_images']:
+            images_data = self.context.get('request').FILES
+            options = []
+            # instance.images.all().delete()  # Delete existing images
+
+            for key in images_data:
+                if 'image_' in key:
+                    option_id = key.split('_')[1]  # Expecting the key to be formatted as 'image_OPTIONID'
+                    image_file = images_data[key]
+
+                    # Check if image with the option_id already exists
+                    image = instance.images.filter(option_id=option_id).first()
+                    if image:
+                        image.image = image_file
+                        image.save()
+                    else:
+                        image = Image.objects.create(
+                            question=instance,
+                            image=image_file,
+                            option_id=option_id
+                        )
+
+                    options.append({'id': option_id, 'image': image.image.url})
+
+            instance.options = options
+        else:
+            instance.images.all().delete()
+            instance.options = validated_data.get('options', instance.options)
+
+        instance.save()
+        return instance
+    
     def to_representation(self, instance):
         representation = super().to_representation(instance)
         if instance.question_type in ['multiple_choice_images', 'drag_and_drop_images']:
-            # Move images to options
             representation['options'] = representation.pop('images', [])
         return representation
+    
+    
+    
 
 
 

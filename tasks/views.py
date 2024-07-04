@@ -1,3 +1,4 @@
+import json
 from rest_framework import viewsets, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -202,7 +203,6 @@ class QuestionViewSet(viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         data = request.data.copy()
-        print(data)
 
         if isinstance(data, list):
             for item in data:
@@ -216,6 +216,24 @@ class QuestionViewSet(viewsets.ModelViewSet):
             return Response(self.serializer_class(questions, many=isinstance(data, list)).data, status=status.HTTP_201_CREATED)
         print(serializer.errors)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+    def partial_update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', True)
+        instance = self.get_object()
+        data = request.data.copy()
+
+        print(data)
+
+
+        data['task'] = self.kwargs['task_pk']
+        serializer = self.serializer_class(instance, data=data, partial=partial, context={'request': request})
+        if serializer.is_valid():
+            question = serializer.save()
+            return Response(self.serializer_class(question).data, status=status.HTTP_200_OK)
+        print(serializer.errors)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    
 
     @action(detail=True, methods=['post'], url_path='answer', permission_classes=[IsAuthenticated])
     def answer(self, request, *args, **kwargs):
