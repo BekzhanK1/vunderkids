@@ -139,7 +139,7 @@ class Student(models.Model):
             elif now.date() == (self.last_task_completed_at + timedelta(days=1)).date():
                 self.streak += 1
             else:
-                self.streak = 0
+                self.streak = 1
         else:
             self.streak = 1
         self.last_task_completed_at = now
@@ -183,6 +183,7 @@ class Child(models.Model):
 
     def update_streak(self):
         now = timezone.now()
+        print("update_streak")
         if self.last_task_completed_at:
             if now.date() == self.last_task_completed_at.date():
                 return

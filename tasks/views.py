@@ -9,6 +9,8 @@ from account.models import Student, Child
 from .models import Answer, Course, Image, Section, Lesson, Content, Task, Question, TaskCompletion
 from .serializers import CourseSerializer, SectionSerializer, LessonSerializer, ContentSerializer, TaskSerializer, QuestionSerializer, TaskSummarySerializer
 from rest_framework.views import APIView
+from django.utils import timezone
+
 
 
 class CourseViewSet(viewsets.ModelViewSet):
@@ -57,7 +59,7 @@ class SectionViewSet(viewsets.ModelViewSet):
     
     def list(self, request, course_pk=None):
         queryset = self.get_queryset()
-        serializer = self.serializer_class(queryset, many=True)
+        serializer = SectionSerializer(queryset, many=True, context={'request': request})
         return Response(serializer.data)
     
     def create(self, request, course_pk=None):
@@ -244,7 +246,6 @@ class QuestionViewSet(viewsets.ModelViewSet):
 
         # Fetch the correct answer status
         is_correct = self.validate_answer(question, answer_text)
-        print(is_correct)
 
         if user.is_student:
             result = self.handle_answer(user=user, question=question, answer_text=answer_text, is_correct=is_correct)
@@ -257,8 +258,6 @@ class QuestionViewSet(viewsets.ModelViewSet):
         return Response(result, status=status.HTTP_200_OK)
 
     def validate_answer(self, question, answer):
-        print(f"Answer: {answer}")
-        print(f"Correct Answer: {question.correct_answer}")
         if question.question_type in ['multiple_choice_text','multiple_choice_images', 'true_false', 'drag_position', 'number_line']:
             return int(answer) == question.correct_answer
         elif question.question_type in ['drag_and_drop_text', 'drag_and_drop_images']:
@@ -269,13 +268,13 @@ class QuestionViewSet(viewsets.ModelViewSet):
 
     def handle_answer(self, user=None, child=None, question=None, answer_text=None, is_correct=False):
         entity = user.student if user else child
+        print(entity)
         is_answer_exists = Answer.objects.filter(
             user=user, child=child,
             question=question
         ).exists()
 
 
-        print(f"Does answer exists?: {is_answer_exists}")
 
         if is_answer_exists:
             return {
@@ -324,6 +323,7 @@ class QuestionViewSet(viewsets.ModelViewSet):
                 correct=correct_answers,
                 wrong=wrong_answers
             )
+            print("Task completed")
             entity.update_streak()
 
         return {

@@ -170,15 +170,15 @@ class TaskSerializer(serializers.ModelSerializer):
         request = self.context.get('request', None)
         if not request:
             return None
-
+        
         user = request.user
         child_id = request.query_params.get('child_id')
 
         if user.is_student:
-            return TaskCompletion.objects.filter(user=user, task=obj).first()
+            return TaskCompletion.objects.filter(user=user, task=obj).exists()
         elif user.is_parent and child_id:
             child = get_object_or_404(Child, parent=user.parent, pk=child_id)
-            return TaskCompletion.objects.filter(child=child, task=obj).first()
+            return TaskCompletion.objects.filter(child=child, task=obj).exists()
         else:
             return None
 
@@ -285,10 +285,10 @@ class ContentSerializer(serializers.ModelSerializer):
             child_id = request.query_params.get('child_id')
 
             if user.is_student:
-                return TaskCompletion.objects.filter(user=user, task=obj).first()
+                return TaskCompletion.objects.filter(user=user, task=obj).exists()
             elif user.is_parent and child_id:
                 child = get_object_or_404(Child, parent=user.parent, pk=child_id)
-                return TaskCompletion.objects.filter(child=child, task=obj).first()
+                return TaskCompletion.objects.filter(child=child, task=obj).exists()
             else:
                 return None
         

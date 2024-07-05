@@ -8,6 +8,7 @@ from django.utils.html import strip_tags
 from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from datetime import timedelta
 
 frontend_url = settings.FRONTEND_URL
 
@@ -73,16 +74,18 @@ def send_password_reset_request_email(user_id):
 
 @shared_task
 def check_streaks():
-    now = timezone.now()
+    now = timezone.now().date()
     students = Student.objects.all()
     for student in students:
         if student.last_task_completed_at:
-            if now.date() != student.last_task_completed_at.date():
+            last_date = student.last_task_completed_at.date()
+            if now > last_date and now != (last_date + timedelta(days=1)):
                 student.streak = 0
                 student.save()
     children = Child.objects.all()
     for child in children:
         if child.last_task_completed_at:
-            if now.date() != child.last_task_completed_at.date():
+            last_date = child.last_task_completed_at.date()
+            if now > last_date and now != (last_date + timedelta(days=1)):
                 child.streak = 0
                 child.save()
