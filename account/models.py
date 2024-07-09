@@ -10,10 +10,15 @@ from django.conf import settings
 GRADE_CHOICES = [(i, str(i)) for i in range(0, 5)]
 SECTION_CHOICES = [(chr(i), chr(i)) for i in range(ord('А'), ord('Я') + 1)]
 GENDER_CHOICES = [
-        ('M', 'Male'),
-        ('F', 'Female'),
-        ('O', 'Other'),
-    ]
+    ('M', 'Male'),
+    ('F', 'Female'),
+    ('O', 'Other'),
+]
+LANGUAGE_CHOICES = [
+    ('ru', 'Russian'),
+    ('kz', 'Kazakh'),
+    ('en', 'English'),
+]
 
 
 
@@ -86,6 +91,7 @@ class Class(models.Model):
     school = models.ForeignKey(School, on_delete=models.CASCADE, related_name='classes')
     grade = models.IntegerField(choices=GRADE_CHOICES)
     section = models.CharField(max_length=1, choices=SECTION_CHOICES)
+    language = models.CharField(max_length=50, choices=LANGUAGE_CHOICES, default='ru')
 
     def __str__(self):
         return f"{self.grade}{self.section}"
@@ -108,6 +114,7 @@ class Student(models.Model):
     cups = models.PositiveIntegerField(default=0)
     stars = models.PositiveIntegerField(default=0)
     gender = models.CharField(max_length=1, choices=GENDER_CHOICES, default="O")
+    language = models.CharField(max_length=50, choices=LANGUAGE_CHOICES, default='ru')
     avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
     birth_date = models.DateField(default=date(2015, 1, 1))
     last_task_completed_at = models.DateTimeField(null=True, blank = True)
@@ -132,7 +139,7 @@ class Student(models.Model):
             elif now.date() == (self.last_task_completed_at + timedelta(days=1)).date():
                 self.streak += 1
             else:
-                self.streak = 0
+                self.streak = 1
         else:
             self.streak = 1
         self.last_task_completed_at = now
@@ -157,6 +164,7 @@ class Child(models.Model):
     grade = models.IntegerField(choices=GRADE_CHOICES)
     avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
     gender = models.CharField(max_length=1, choices=GENDER_CHOICES, default="O")
+    language = models.CharField(max_length=50, choices=LANGUAGE_CHOICES, default='ru')
     cups = models.PositiveIntegerField(default=0)
     stars = models.PositiveIntegerField(default=0)
     level = models.PositiveIntegerField(default=1)
@@ -175,6 +183,7 @@ class Child(models.Model):
 
     def update_streak(self):
         now = timezone.now()
+        print("update_streak")
         if self.last_task_completed_at:
             if now.date() == self.last_task_completed_at.date():
                 return

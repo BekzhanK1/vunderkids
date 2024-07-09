@@ -25,11 +25,11 @@ def debug_task(self):
 app.conf.beat_schedule = {
     'send_daily_email_to_all_students': {
         'task': 'account.tasks.send_daily_email_to_all_students',
-        'schedule': crontab(hour=12, minute=15),  
+        'schedule': crontab(hour=20, minute=15),  
     },
     'send_daily_email_to_all_parents': {
         'task': 'account.tasks.send_daily_email_to_all_parents',
-        'schedule': crontab(hour=14, minute=58),
+        'schedule': crontab(hour=20, minute=00),
     },
     'check-streaks-every-night': {
         'task': 'account.tasks.check_streaks',

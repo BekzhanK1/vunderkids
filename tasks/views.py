@@ -1,3 +1,4 @@
+import json
 from rest_framework import viewsets, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -8,6 +9,8 @@ from account.models import Student, Child
 from .models import Answer, Course, Image, Section, Lesson, Content, Task, Question, TaskCompletion
 from .serializers import CourseSerializer, SectionSerializer, LessonSerializer, ContentSerializer, TaskSerializer, QuestionSerializer, TaskSummarySerializer
 from rest_framework.views import APIView
+from django.utils import timezone
+
 
 
 class CourseViewSet(viewsets.ModelViewSet):
@@ -21,10 +24,10 @@ class CourseViewSet(viewsets.ModelViewSet):
         
         if user.is_student:
             student = get_object_or_404(Student, user=user)
-            queryset = Course.objects.filter(grade=student.grade)
+            queryset = Course.objects.filter(grade=student.grade, language=student.language)
         elif user.is_parent and child_id:
             child = get_object_or_404(Child, parent=user.parent, pk=child_id)
-            queryset = Course.objects.filter(grade=child.grade)
+            queryset = Course.objects.filter(grade=child.grade, language=child.language)
         else:
             queryset = Course.objects.all()
 
@@ -53,6 +56,11 @@ class SectionViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return Section.objects.filter(course_id=self.kwargs['course_pk']).order_by('order')
+    
+    def list(self, request, course_pk=None):
+        queryset = self.get_queryset()
+        serializer = SectionSerializer(queryset, many=True, context={'request': request})
+        return Response(serializer.data)
     
     def create(self, request, course_pk=None):
         data = request.data.copy()
@@ -196,8 +204,7 @@ class QuestionViewSet(viewsets.ModelViewSet):
         return Question.objects.filter(task_id=self.kwargs['task_pk'])
 
     def create(self, request, *args, **kwargs):
-        data = request.data
-        print(data)
+        data = request.data.copy()
 
         if isinstance(data, list):
             for item in data:
@@ -211,6 +218,24 @@ class QuestionViewSet(viewsets.ModelViewSet):
             return Response(self.serializer_class(questions, many=isinstance(data, list)).data, status=status.HTTP_201_CREATED)
         print(serializer.errors)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+    def partial_update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', True)
+        instance = self.get_object()
+        data = request.data.copy()
+
+        print(data)
+
+
+        data['task'] = self.kwargs['task_pk']
+        serializer = self.serializer_class(instance, data=data, partial=partial, context={'request': request})
+        if serializer.is_valid():
+            question = serializer.save()
+            return Response(self.serializer_class(question).data, status=status.HTTP_200_OK)
+        print(serializer.errors)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    
 
     @action(detail=True, methods=['post'], url_path='answer', permission_classes=[IsAuthenticated])
     def answer(self, request, *args, **kwargs):
@@ -221,7 +246,6 @@ class QuestionViewSet(viewsets.ModelViewSet):
 
         # Fetch the correct answer status
         is_correct = self.validate_answer(question, answer_text)
-        print(is_correct)
 
         if user.is_student:
             result = self.handle_answer(user=user, question=question, answer_text=answer_text, is_correct=is_correct)
@@ -234,25 +258,23 @@ class QuestionViewSet(viewsets.ModelViewSet):
         return Response(result, status=status.HTTP_200_OK)
 
     def validate_answer(self, question, answer):
-        print(f"Answer: {answer}")
-        print(f"Correct Answer: {question.correct_answer}")
-        if question.question_type in ['multiple_choice_text', 'true_false', 'drag_and_drop', 'drag_position', 'number_line']:
+        if question.question_type in ['multiple_choice_text','multiple_choice_images', 'true_false', 'drag_position', 'number_line']:
             return int(answer) == question.correct_answer
-        elif question.question_type == 'multiple_choice_images':
-            return int(answer) == question.correct_answer
+        elif question.question_type in ['drag_and_drop_text', 'drag_and_drop_images']:
+            return answer == question.correct_answer
         elif question.question_type == 'mark_all':
             return set(answer) == set(question.correct_answer)
         return False
 
     def handle_answer(self, user=None, child=None, question=None, answer_text=None, is_correct=False):
         entity = user.student if user else child
+        print(entity)
         is_answer_exists = Answer.objects.filter(
             user=user, child=child,
             question=question
         ).exists()
 
 
-        print(f"Does answer exists?: {is_answer_exists}")
 
         if is_answer_exists:
             return {
@@ -301,6 +323,7 @@ class QuestionViewSet(viewsets.ModelViewSet):
                 correct=correct_answers,
                 wrong=wrong_answers
             )
+            print("Task completed")
             entity.update_streak()
 
         return {

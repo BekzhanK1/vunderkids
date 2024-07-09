@@ -1,14 +1,16 @@
 from django.db import models
 from django.contrib.auth import get_user_model
 from account.models import Child
+from account.models import LANGUAGE_CHOICES, GRADE_CHOICES
 
 User = get_user_model()
 
 class Course(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
-    grade = models.IntegerField()
+    grade = models.IntegerField(choices=GRADE_CHOICES)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    language = models.CharField(max_length=50, choices=LANGUAGE_CHOICES, default='ru')
 
     class Meta:
         ordering = ['grade']
@@ -70,7 +72,8 @@ class Question(models.Model):
     QUESTION_TYPES = [
         ('multiple_choice_text', 'Multiple Choice Text'),
         ('multiple_choice_images', 'Multiple Choice Images'),
-        ('drag_and_drop', 'Drag and Drop'),
+        ('drag_and_drop_text', 'Drag and Drop Text'),
+        ('drag_and_drop_images', 'Drag and Drop Images'),
         ('true_false', 'True or False'),
         ('mark_all', 'Mark All That Apply'),
         ('number_line', 'Number Line'),
@@ -80,9 +83,10 @@ class Question(models.Model):
     title = models.CharField(max_length=100)
     question_text = models.TextField()
     question_type = models.CharField(max_length=50, choices=QUESTION_TYPES)
-    options = models.JSONField(blank=True, null=True)  # For multiple choice, mark all, drag and drop
-    correct_answer = models.JSONField()  # Adjusted to JSONField to store complex answers if needed
+    options = models.JSONField(blank=True, null=True)
+    correct_answer = models.JSONField()  
     template = models.CharField(default='1', max_length=20, blank=True, null=True)
+    audio = models.FileField(upload_to='audio/', blank=True, null=True)
     def __str__(self):
         return f"[Task: {self.task}] {self.question_text}"
     

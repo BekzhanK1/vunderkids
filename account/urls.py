@@ -28,6 +28,7 @@ urlpatterns = [
     path('login/', MyTokenObtainPairView.as_view()),
     path('token/refresh/', TokenRefreshView.as_view()),
     path('current-user/', CurrentUserView.as_view()),
+    path('update-user/', UserUpdateView.as_view()),
     path('', include(supervisor_school_router.urls)),
     path('', include(children_router.urls)),
     path('', include(router.urls)),
