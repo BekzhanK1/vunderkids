@@ -1,6 +1,7 @@
 from pathlib import Path
 import os
 from dotenv import load_dotenv
+import dj_database_url
 load_dotenv(override=True)
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -8,17 +9,31 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-vq4uf)bbe9+0yu+_-d5v(q8sv0a03sjy0r(@fy=0(96m4brpc1'
 DEBUG = True
 
+STAGE = os.getenv("STAGE")
+print(STAGE)
+
 
 # CHANGE BEFORE PRODUCTION
-ALLOWED_HOSTS = ['vunderkids.kz', 'www.vunderkids.kz']
-
-CORS_ALLOW_ALL_ORIGINS = False
-CORS_ALLOWED_ORIGINS = [
-    "https://vunderkids.kz",
-    "https://www.vunderkids.kz",
-]
-
-CSRF_TRUSTED_ORIGINS = ['https://www.vunderkids.kz', 'https://vunderkids.kz']
+if STAGE == 'PROD':
+    print("HEY")
+    ALLOWED_HOSTS = ['https://vunderkids.kz', 'https://www.vunderkids.kz', 'http://85.198.90.24', 'http://localhost', 'http://127.0.0.1', 'vunderkids.kz', 'www.vunderkids.kz', 'api.vunderkids.kz']
+    CORS_ALLOW_ALL_ORIGINS = False
+    CORS_ALLOWED_ORIGINS = [
+        "https://vunderkids.kz",
+        "https://www.vunderkids.kz",
+    ]
+    CSRF_TRUSTED_ORIGINS = [
+        'https://www.vunderkids.kz', 
+        'https://vunderkids.kz',
+        'https://api.vunderkids.kz'
+    ]
+    FRONTEND_URL = "https://vunderkids.kz/"
+else:
+    ALLOWED_HOSTS = ['*']
+    CORS_ALLOW_ALL_ORIGINS = True
+    CORS_ALLOWED_ORIGINS = ['*']
+    CSRF_TRUSTED_ORIGINS = ['*']
+    FRONTEND_URL = "http://localhost:5173/"
 
 
 INSTALLED_APPS = [
@@ -104,10 +119,9 @@ TEMPLATES = [
 WSGI_APPLICATION = 'vunderkids.wsgi.application'
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.config(
+        default='postgres://postgres:1234@localhost:5432/vunderkids'
+    )
 }
 
 AUTH_USER_MODEL = 'account.User'
@@ -172,7 +186,6 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 
 QUESTION_REWARD = 5
-FRONTEND_URL = "https://vunderkids.kz/"
 
 
 

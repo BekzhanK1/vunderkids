@@ -339,14 +339,16 @@ class PlayGameView(APIView):
 
     def get(self, request):
         user = request.user
-        child_id = request.GET.get('child_id', None)
+        child_id = request.query_params.get('child_id', None)
+
+        print(child_id)
 
         game_cost = 20
 
         if user.is_student:
             student = get_object_or_404(Student, user=user)
             if student.stars < game_cost:
-                return Response({"message": "Not enough stars", "is_enough": False }, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"message": "Not enough stars", "is_enough": False }, status=status.HTTP_200_OK)
             student.stars -= game_cost
             student.save()
             return Response({"message": f"{game_cost} stars have been deducted", "is_enough": True}, status=status.HTTP_200_OK)
@@ -354,7 +356,7 @@ class PlayGameView(APIView):
         elif user.is_parent and child_id:
             child = get_object_or_404(Child, parent=user.parent, pk=child_id)
             if child.stars < game_cost:
-                return Response({"message": "Not enough stars", "is_enough": False}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"message": "Not enough stars", "is_enough": False}, status=status.HTTP_200_OK)
             child.stars -= game_cost
             child.save()
             return Response({"message": f"{game_cost} stars have been deducted from the child", "is_enough": True}, status=status.HTTP_200_OK)

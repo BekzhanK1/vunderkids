@@ -5,7 +5,7 @@ from account.models import Child, Student, Parent, User
 from account.utils import render_email
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
-from django.core.mail import send_mail
+from django.core.mail import send_mail, get_connection, send_mass_mail
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from datetime import timedelta
@@ -29,6 +29,8 @@ def send_daily_email_to_all_students():
 @shared_task
 def send_daily_email_to_all_parents():
     parents = Parent.objects.prefetch_related('children').all()
+    email_messages = []
+
     for parent in parents:
         if parent.user.is_active:
             context = {
@@ -45,7 +47,11 @@ def send_daily_email_to_all_parents():
                 to=[parent.user.email]
             )
             msg.attach_alternative(html_content, "text/html")
-            msg.send()
+            email_messages.append(msg)
+    
+    # Send all emails in bulk
+    connection = get_connection()
+    connection.send_messages(email_messages)
 
 @shared_task
 def send_activation_email(user_id, password):
