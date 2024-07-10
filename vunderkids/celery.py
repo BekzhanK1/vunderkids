@@ -29,7 +29,7 @@ app.conf.beat_schedule = {
     },
     'send_daily_email_to_all_parents': {
         'task': 'account.tasks.send_daily_email_to_all_parents',
-        'schedule': crontab(hour=20, minute=00),
+        'schedule': crontab(hour=11, minute=30),
     },
     'check-streaks-every-night': {
         'task': 'account.tasks.check_streaks',
