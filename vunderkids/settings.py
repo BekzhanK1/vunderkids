@@ -1,5 +1,6 @@
 from pathlib import Path
 import os
+import dj_database_url
 from dotenv import load_dotenv
 load_dotenv(override=True)
 
@@ -103,14 +104,9 @@ WSGI_APPLICATION = 'vunderkids.wsgi.application'
 # settings.py
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'vunderkids',
-        'USER': 'postgres',
-        'PASSWORD': '1234',
-        'HOST': 'localhost',  # Set to 'localhost' or the IP address of your PostgreSQL server
-        'PORT': '5432',       # Default PostgreSQL port
-    }
+    'default': dj_database_url.config(
+        default='postgres://postgres:1234@localhost:5432/vunderkids'
+    )
 }
 
 
