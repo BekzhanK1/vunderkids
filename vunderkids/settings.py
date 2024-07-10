@@ -100,12 +100,19 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'vunderkids.wsgi.application'
 
+# settings.py
+
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'vunderkids',
+        'USER': 'postgres',
+        'PASSWORD': '1234',
+        'HOST': 'localhost',  # Set to 'localhost' or the IP address of your PostgreSQL server
+        'PORT': '5432',       # Default PostgreSQL port
     }
 }
+
 
 AUTH_USER_MODEL = 'account.User'
 
@@ -169,7 +176,7 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 
 QUESTION_REWARD = 5
-FRONTEND_URL = "http://85.198.90.24/"
+FRONTEND_URL = "http://vunderkids.kz/"
 
 
 
