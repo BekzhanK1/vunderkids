@@ -10,13 +10,16 @@ DEBUG = True
 
 
 # CHANGE BEFORE PRODUCTION
-ALLOWED_HOSTS = ['*']
-CORS_ALLOW_ALL_ORIGINS = True
-# CORS_ALLOWED_ORIGINS = [
-#     "http://localhost:5173",
-#     "http://127.0.0.1:5173",
-#     "http://127.0.0.1:5500"
-# ]
+ALLOWED_HOSTS = ['vunderkids.kz', 'www.vunderkids.kz']
+
+CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOWED_ORIGINS = [
+    "https://vunderkids.kz",
+    "https://www.vunderkids.kz",
+]
+
+CSRF_TRUSTED_ORIGINS = ['https://www.vunderkids.kz', 'https://vunderkids.kz']
+
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -169,7 +172,7 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 
 QUESTION_REWARD = 5
-FRONTEND_URL = "http://85.198.90.24/"
+FRONTEND_URL = "https://vunderkids.kz/"
 
 
 
