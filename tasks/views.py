@@ -10,10 +10,12 @@ from .models import Answer, Course, Image, Section, Lesson, Content, Task, Quest
 from .serializers import CourseSerializer, SectionSerializer, LessonSerializer, ContentSerializer, TaskSerializer, QuestionSerializer, TaskSummarySerializer
 from rest_framework.views import APIView
 from django.utils import timezone
+from subscription.mixins import SubscriptionMixin
 
 
 
-class CourseViewSet(viewsets.ModelViewSet):
+
+class CourseViewSet(SubscriptionMixin, viewsets.ModelViewSet):
     queryset = Course.objects.all()
     serializer_class = CourseSerializer
     permission_classes = [IsSuperUserOrStaffOrReadOnly]
@@ -49,7 +51,7 @@ class CourseViewSet(viewsets.ModelViewSet):
         context.update({"request": self.request})
         return context
 
-class SectionViewSet(viewsets.ModelViewSet):
+class SectionViewSet(SubscriptionMixin, viewsets.ModelViewSet):
     queryset = Section.objects.all()
     serializer_class = SectionSerializer
     permission_classes = [IsSuperUserOrStaffOrReadOnly]
@@ -83,7 +85,7 @@ class SectionViewSet(viewsets.ModelViewSet):
         context.update({"request": self.request})
         return context
 
-class ContentViewSet(viewsets.ModelViewSet):
+class ContentViewSet(SubscriptionMixin, viewsets.ModelViewSet):
     queryset = Content.objects.all()
     serializer_class = ContentSerializer
     permission_classes = [IsSuperUserOrStaffOrReadOnly]
@@ -121,7 +123,7 @@ class ContentViewSet(viewsets.ModelViewSet):
         context.update({"request": self.request})
         return context
 
-class LessonViewSet(viewsets.ModelViewSet):
+class LessonViewSet(SubscriptionMixin, viewsets.ModelViewSet):
     queryset = Lesson.objects.all()
     serializer_class = LessonSerializer
     permission_classes = [IsSuperUserOrStaffOrReadOnly]
@@ -151,7 +153,7 @@ class LessonViewSet(viewsets.ModelViewSet):
         context.update({"request": self.request})
         return context
 
-class TaskViewSet(viewsets.ModelViewSet):
+class TaskViewSet(SubscriptionMixin, viewsets.ModelViewSet):
     queryset = Task.objects.all()
     serializer_class = TaskSerializer
     permission_classes = [IsSuperUserOrStaffOrReadOnly]
@@ -195,7 +197,7 @@ class TaskViewSet(viewsets.ModelViewSet):
         context.update({"request": self.request})
         return context
 
-class QuestionViewSet(viewsets.ModelViewSet):
+class QuestionViewSet(SubscriptionMixin, viewsets.ModelViewSet):
     queryset = Question.objects.all()
     serializer_class = QuestionSerializer
     permission_classes = [IsSuperUserOrStaffOrReadOnly]
@@ -334,7 +336,7 @@ class QuestionViewSet(viewsets.ModelViewSet):
 
 
 
-class PlayGameView(APIView):
+class PlayGameView(SubscriptionMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):

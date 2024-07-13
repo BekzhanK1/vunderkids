@@ -238,12 +238,15 @@ class ClassSerializer(serializers.ModelSerializer):
 class ChildSerializer(serializers.ModelSerializer):
     email = serializers.SerializerMethodField()
     tasks_completed = serializers.SerializerMethodField()
+    has_subscription = serializers.SerializerMethodField()
 
 
     class Meta:
         model = Child       
         fields = '__all__'
-        
+    
+    def get_has_subscription(self, obj):
+        return obj.parent.user.subscription.is_active
     def get_tasks_completed(self, obj):
         return obj.completed_tasks.count()
     def get_email(self, obj):
@@ -279,7 +282,8 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
                     'cups': student.cups,
                     'stars': student.stars,
                     'is_superuser': self.user.is_superuser,
-                    'is_staff': self.user.is_staff
+                    'is_staff': self.user.is_staff,
+                    'has_subscription': self.user.subscription.is_active
                 }
             elif self.user.is_parent:
                 parent = self.user.parent
@@ -292,7 +296,8 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
                     'role': self.user.role,
                     'children': ChildSerializer(children, many=True).data,
                     'is_superuser': self.user.is_superuser,
-                    'is_staff': self.user.is_staff
+                    'is_staff': self.user.is_staff,
+                    'has_subscription': self.user.subscription.is_active
                 }
             elif self.user.is_superuser:
                 data['user'] = {

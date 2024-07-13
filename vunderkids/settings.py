@@ -32,7 +32,8 @@ INSTALLED_APPS = [
     'api',
     'account',
     'tasks',
-    'storages',  # Added storages for S3 integration
+    'subscription',
+    'storages',
 ]
 
 REST_FRAMEWORK = {

@@ -1,4 +1,4 @@
-from rest_framework import status, viewsets, generics
+from rest_framework import status, viewsets
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -15,7 +15,7 @@ from tasks.models import TaskCompletion
 from .tasks import send_password_reset_request_email
 import uuid
 from datetime import timedelta, datetime
-
+from subscription.models import Plan, Subscription
 class ActivateAccount(APIView):
     def get(self, request, token):
         try:
@@ -23,6 +23,8 @@ class ActivateAccount(APIView):
             user.is_active = True
             user.activation_token = None
             user.save()
+            plan = Plan.objects.get_or_create(duration='free_trial')
+            Subscription.objects.create(user=user, plan=plan)
             return Response('Your account has been activated successfully!', status=status.HTTP_200_OK)
         except User.DoesNotExist:
             return Response('Invalid activation link!', status=status.HTTP_400_BAD_REQUEST)
@@ -429,10 +431,6 @@ class AllStudentsView(APIView):
         return Response(sorted_combined_data, status=status.HTTP_200_OK)
         
 
-
-
-        
-
 class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = MyTokenObtainPairSerializer
 
@@ -459,7 +457,8 @@ class CurrentUserView(APIView):
                 'stars': student.stars,
                 'is_superuser': request.user.is_superuser,
                 'is_staff': request.user.is_staff,
-                'tasks_completed': tasks_completed
+                'tasks_completed': tasks_completed,
+                'has_subscription': request.user.subscription.is_active
             }
         elif request.user.is_parent:
             parent = request.user.parent
@@ -472,7 +471,8 @@ class CurrentUserView(APIView):
                 'role': request.user.role,
                 'children': ChildSerializer(children, many=True).data,
                 'is_superuser': request.user.is_superuser,
-                'is_staff': request.user.is_staff
+                'is_staff': request.user.is_staff,
+                'has_subscription': request.user.subscription.is_active
             }
 
         elif request.user.is_supervisor:
