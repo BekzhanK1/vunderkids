@@ -4,21 +4,20 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from rest_framework.decorators import action
-from account.permissions import IsSuperUserOrStaffOrReadOnly
+from account.permissions import IsSuperUserOrStaffOrReadOnly, HasSubscription
 from account.models import Student, Child
 from .models import Answer, Course, Image, Section, Lesson, Content, Task, Question, TaskCompletion
 from .serializers import CourseSerializer, SectionSerializer, LessonSerializer, ContentSerializer, TaskSerializer, QuestionSerializer, TaskSummarySerializer
 from rest_framework.views import APIView
 from django.utils import timezone
-from subscription.mixins import SubscriptionMixin
 
 
 
 
-class CourseViewSet(SubscriptionMixin, viewsets.ModelViewSet):
+class CourseViewSet(viewsets.ModelViewSet):
     queryset = Course.objects.all()
     serializer_class = CourseSerializer
-    permission_classes = [IsSuperUserOrStaffOrReadOnly]
+    permission_classes = [HasSubscription, IsSuperUserOrStaffOrReadOnly]
 
     def list(self, request):
         user = request.user
@@ -51,10 +50,10 @@ class CourseViewSet(SubscriptionMixin, viewsets.ModelViewSet):
         context.update({"request": self.request})
         return context
 
-class SectionViewSet(SubscriptionMixin, viewsets.ModelViewSet):
+class SectionViewSet(viewsets.ModelViewSet):
     queryset = Section.objects.all()
     serializer_class = SectionSerializer
-    permission_classes = [IsSuperUserOrStaffOrReadOnly]
+    permission_classes = [HasSubscription, IsSuperUserOrStaffOrReadOnly]
 
     def get_queryset(self):
         return Section.objects.filter(course_id=self.kwargs['course_pk']).order_by('order')
@@ -85,10 +84,10 @@ class SectionViewSet(SubscriptionMixin, viewsets.ModelViewSet):
         context.update({"request": self.request})
         return context
 
-class ContentViewSet(SubscriptionMixin, viewsets.ModelViewSet):
+class ContentViewSet(viewsets.ModelViewSet):
     queryset = Content.objects.all()
     serializer_class = ContentSerializer
-    permission_classes = [IsSuperUserOrStaffOrReadOnly]
+    permission_classes = [HasSubscription, IsSuperUserOrStaffOrReadOnly]
 
     def get_queryset(self):
         return Content.objects.filter(section_id=self.kwargs['section_pk']).order_by('order')
@@ -123,10 +122,10 @@ class ContentViewSet(SubscriptionMixin, viewsets.ModelViewSet):
         context.update({"request": self.request})
         return context
 
-class LessonViewSet(SubscriptionMixin, viewsets.ModelViewSet):
+class LessonViewSet(viewsets.ModelViewSet):
     queryset = Lesson.objects.all()
     serializer_class = LessonSerializer
-    permission_classes = [IsSuperUserOrStaffOrReadOnly]
+    permission_classes = [HasSubscription, IsSuperUserOrStaffOrReadOnly]
 
     def get_queryset(self):
         return Lesson.objects.filter(section_id=self.kwargs['section_pk']).order_by('order')
@@ -153,10 +152,10 @@ class LessonViewSet(SubscriptionMixin, viewsets.ModelViewSet):
         context.update({"request": self.request})
         return context
 
-class TaskViewSet(SubscriptionMixin, viewsets.ModelViewSet):
+class TaskViewSet(viewsets.ModelViewSet):
     queryset = Task.objects.all()
     serializer_class = TaskSerializer
-    permission_classes = [IsSuperUserOrStaffOrReadOnly]
+    permission_classes = [HasSubscription, IsSuperUserOrStaffOrReadOnly]
 
     def get_queryset(self):
         return Task.objects.filter(section_id=self.kwargs['section_pk']).order_by('order')
@@ -197,10 +196,10 @@ class TaskViewSet(SubscriptionMixin, viewsets.ModelViewSet):
         context.update({"request": self.request})
         return context
 
-class QuestionViewSet(SubscriptionMixin, viewsets.ModelViewSet):
+class QuestionViewSet(viewsets.ModelViewSet):
     queryset = Question.objects.all()
     serializer_class = QuestionSerializer
-    permission_classes = [IsSuperUserOrStaffOrReadOnly]
+    permission_classes = [HasSubscription, IsSuperUserOrStaffOrReadOnly]
 
     def get_queryset(self):
         return Question.objects.filter(task_id=self.kwargs['task_pk'])
@@ -336,19 +335,21 @@ class QuestionViewSet(SubscriptionMixin, viewsets.ModelViewSet):
 
 
 
-class PlayGameView(SubscriptionMixin, APIView):
-    permission_classes = [IsAuthenticated]
+class PlayGameView(APIView):
+    permission_classes = [HasSubscription, IsAuthenticated]
 
     def get(self, request):
         user = request.user
-        child_id = request.GET.get('child_id', None)
+        child_id = request.query_params.get('child_id', None)
+
+        print(child_id)
 
         game_cost = 20
 
         if user.is_student:
             student = get_object_or_404(Student, user=user)
             if student.stars < game_cost:
-                return Response({"message": "Not enough stars", "is_enough": False }, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"message": "Not enough stars", "is_enough": False }, status=status.HTTP_200_OK)
             student.stars -= game_cost
             student.save()
             return Response({"message": f"{game_cost} stars have been deducted", "is_enough": True}, status=status.HTTP_200_OK)
@@ -356,7 +357,7 @@ class PlayGameView(SubscriptionMixin, APIView):
         elif user.is_parent and child_id:
             child = get_object_or_404(Child, parent=user.parent, pk=child_id)
             if child.stars < game_cost:
-                return Response({"message": "Not enough stars", "is_enough": False}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"message": "Not enough stars", "is_enough": False}, status=status.HTTP_200_OK)
             child.stars -= game_cost
             child.save()
             return Response({"message": f"{game_cost} stars have been deducted from the child", "is_enough": True}, status=status.HTTP_200_OK)

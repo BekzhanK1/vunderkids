@@ -1,8 +1,9 @@
 from celery import shared_task
 from django.core.mail import EmailMultiAlternatives
 from django.conf import settings
-from account.models import Child, Student, Parent, User, Subscription
-from account.utils import render_email
+from account.models import Child, Student, Parent, User
+from subscription.models import Subscription
+from account.utils import generate_password, render_email
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from django.core.mail import send_mail, send_mass_mail
@@ -64,6 +65,33 @@ def send_daily_email_to_all_parents():
             datatuple.append(msg)
     
     send_mass_html_mail(datatuple, fail_silently=False)
+
+
+@shared_task
+def send_mass_activation_email(user_ids):
+    users = User.objects.filter(id__in=user_ids)
+    datatuple = []
+    
+    for user in users:
+        password = generate_password()
+        user.set_password(password)
+        user.save()
+        activation_url = f"{frontend_url}activate/{user.activation_token}/"
+        context = {'user': user, 'activation_url': activation_url, 'password': password}
+        subject = 'Activate your Vunderkids Account'
+        html_message = render_to_string('activation_email.html', context)
+        plain_message = strip_tags(html_message)
+        msg = (
+            subject,
+            plain_message,
+            html_message,
+            settings.DEFAULT_FROM_EMAIL,
+            [user.email]
+        )
+        datatuple.append(msg)
+    
+    send_mass_html_mail(datatuple, fail_silently=False)
+
 
 
 @shared_task
@@ -133,5 +161,8 @@ def delete_expired_subscriptions():
     count = expired_subscriptions.count()
     expired_subscriptions.delete()
     return f"Deleted {count} expired subscriptions"
+
+
+
 
     

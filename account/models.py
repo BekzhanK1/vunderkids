@@ -54,7 +54,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     first_name = models.CharField(max_length=30)
     last_name = models.CharField(max_length=150)
     phone_regex = RegexValidator(regex=r'^\+?1?\d{9,15}$', message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.")
-    phone_number = models.CharField(validators=[phone_regex], max_length=17)
+    phone_number = models.CharField(validators=[phone_regex], max_length=17, blank=True, null=True)
     role = models.CharField(max_length=15, choices=ROLE_CHOICES, blank=True, null=True)
     is_active = models.BooleanField(default=False)
     is_staff = models.BooleanField(default=False)
@@ -116,7 +116,7 @@ class Student(models.Model):
     gender = models.CharField(max_length=1, choices=GENDER_CHOICES, default="O")
     language = models.CharField(max_length=50, choices=LANGUAGE_CHOICES, default='ru')
     avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
-    birth_date = models.DateField(default=date(2015, 1, 1))
+    birth_date = models.DateField(default=date(2015, 1, 1), blank=True, null=True)
     last_task_completed_at = models.DateTimeField(null=True, blank = True)
 
     def __str__(self):

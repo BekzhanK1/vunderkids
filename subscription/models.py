@@ -1,6 +1,6 @@
 from django.db import models
 from datetime import timedelta
-from django.utils import timezone  # Corrected import
+from django.utils import timezone
 from account.models import User
 
 class Plan(models.Model):
@@ -22,16 +22,19 @@ class Plan(models.Model):
         super().save(*args, **kwargs)
     
     def __str__(self):
-        return f"{self.get_duration_display()} Plan"  # Corrected string representation
+        return f"{self.get_duration_display()} Plan"
 
 
 class Subscription(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='subscription')
     plan = models.ForeignKey(Plan, on_delete=models.CASCADE, related_name='subscriptions')
     start_date = models.DateTimeField(auto_now_add=True)
-    end_date = models.DateTimeField()
+    end_date = models.DateTimeField(blank=True, null=True)
 
     def save(self, *args, **kwargs):
+        if not self.start_date:
+            self.start_date = timezone.now()
+
         if not self.end_date:
             if self.plan.duration == 'free_trial':
                 self.end_date = self.start_date + timedelta(days=7)
