@@ -190,7 +190,7 @@ class Child(models.Model):
             elif now.date() == (self.last_task_completed_at + timedelta(days=1)).date():
                 self.streak += 1
             else:
-                self.streak = 0
+                self.streak = 1
         else:
             self.streak = 1
         self.last_task_completed_at = now
