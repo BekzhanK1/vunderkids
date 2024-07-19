@@ -4,7 +4,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from rest_framework.decorators import action
-from account.permissions import IsSuperUserOrStaffOrReadOnly
+from account.permissions import IsSuperUserOrStaffOrReadOnly, HasSubscription
 from account.models import Student, Child
 from .models import Answer, Course, Image, Section, Lesson, Content, Task, Question, TaskCompletion
 from .serializers import CourseSerializer, SectionSerializer, LessonSerializer, ContentSerializer, TaskSerializer, QuestionSerializer, TaskSummarySerializer
@@ -13,10 +13,11 @@ from django.utils import timezone
 
 
 
+
 class CourseViewSet(viewsets.ModelViewSet):
     queryset = Course.objects.all()
     serializer_class = CourseSerializer
-    permission_classes = [IsSuperUserOrStaffOrReadOnly]
+    permission_classes = [HasSubscription, IsSuperUserOrStaffOrReadOnly]
 
     def list(self, request):
         user = request.user
@@ -52,7 +53,7 @@ class CourseViewSet(viewsets.ModelViewSet):
 class SectionViewSet(viewsets.ModelViewSet):
     queryset = Section.objects.all()
     serializer_class = SectionSerializer
-    permission_classes = [IsSuperUserOrStaffOrReadOnly]
+    permission_classes = [HasSubscription, IsSuperUserOrStaffOrReadOnly]
 
     def get_queryset(self):
         return Section.objects.filter(course_id=self.kwargs['course_pk']).order_by('order')
@@ -86,7 +87,7 @@ class SectionViewSet(viewsets.ModelViewSet):
 class ContentViewSet(viewsets.ModelViewSet):
     queryset = Content.objects.all()
     serializer_class = ContentSerializer
-    permission_classes = [IsSuperUserOrStaffOrReadOnly]
+    permission_classes = [HasSubscription, IsSuperUserOrStaffOrReadOnly]
 
     def get_queryset(self):
         return Content.objects.filter(section_id=self.kwargs['section_pk']).order_by('order')
@@ -124,7 +125,7 @@ class ContentViewSet(viewsets.ModelViewSet):
 class LessonViewSet(viewsets.ModelViewSet):
     queryset = Lesson.objects.all()
     serializer_class = LessonSerializer
-    permission_classes = [IsSuperUserOrStaffOrReadOnly]
+    permission_classes = [HasSubscription, IsSuperUserOrStaffOrReadOnly]
 
     def get_queryset(self):
         return Lesson.objects.filter(section_id=self.kwargs['section_pk']).order_by('order')
@@ -154,7 +155,7 @@ class LessonViewSet(viewsets.ModelViewSet):
 class TaskViewSet(viewsets.ModelViewSet):
     queryset = Task.objects.all()
     serializer_class = TaskSerializer
-    permission_classes = [IsSuperUserOrStaffOrReadOnly]
+    permission_classes = [HasSubscription, IsSuperUserOrStaffOrReadOnly]
 
     def get_queryset(self):
         return Task.objects.filter(section_id=self.kwargs['section_pk']).order_by('order')
@@ -198,7 +199,7 @@ class TaskViewSet(viewsets.ModelViewSet):
 class QuestionViewSet(viewsets.ModelViewSet):
     queryset = Question.objects.all()
     serializer_class = QuestionSerializer
-    permission_classes = [IsSuperUserOrStaffOrReadOnly]
+    permission_classes = [HasSubscription, IsSuperUserOrStaffOrReadOnly]
 
     def get_queryset(self):
         return Question.objects.filter(task_id=self.kwargs['task_pk'])
@@ -335,7 +336,7 @@ class QuestionViewSet(viewsets.ModelViewSet):
 
 
 class PlayGameView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [HasSubscription, IsAuthenticated]
 
     def get(self, request):
         user = request.user

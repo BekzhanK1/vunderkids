@@ -1,4 +1,5 @@
 from rest_framework.permissions import IsAuthenticated, BasePermission, SAFE_METHODS
+from rest_framework.exceptions import PermissionDenied
 
 
 class IsSuperUser(IsAuthenticated):
@@ -34,3 +35,13 @@ class IsSuperUserOrStaffOrReadOnly(IsAuthenticated):
 class IsSupervisor(IsAuthenticated):
     def has_permission(self, request, view):
         return request.user and request.user.is_supervisor
+    
+class HasSubscription(IsAuthenticated):
+    def has_permission(self, request, view):
+        if request.user.is_student or request.user.is_parent:
+            has_subscription = hasattr(request.user, 'subscription')
+            if not has_subscription:
+                raise PermissionDenied("You do not have an active subscription.")
+            return True
+        else:
+            return True

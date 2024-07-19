@@ -1,4 +1,5 @@
-from rest_framework import status, viewsets, generics
+import pandas as pd
+from rest_framework import status, viewsets
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -12,10 +13,11 @@ from account.serializers import *
 from account.models import *
 from account.permissions import *
 from tasks.models import TaskCompletion
-from .tasks import send_password_reset_request_email
+from .tasks import send_mass_activation_email, send_password_reset_request_email
 import uuid
 from datetime import timedelta, datetime
-
+from subscription.models import Plan, Subscription
+from .utils import generate_password
 class ActivateAccount(APIView):
     def get(self, request, token):
         try:
@@ -23,6 +25,8 @@ class ActivateAccount(APIView):
             user.is_active = True
             user.activation_token = None
             user.save()
+            plan, created = Plan.objects.get_or_create(duration='free_trial')
+            Subscription.objects.create(user=user, plan=plan)
             return Response('Your account has been activated successfully!', status=status.HTTP_200_OK)
         except User.DoesNotExist:
             return Response('Invalid activation link!', status=status.HTTP_400_BAD_REQUEST)
@@ -143,6 +147,110 @@ class SchoolViewSet(viewsets.ModelViewSet):
         school.supervisor = None
         school.save()
         return Response({"message": "Supervisor has been deleted from the school"}, status=status.HTTP_200_OK)
+    
+    @action(detail=False, methods=['post'], url_path='upload-excel', url_name='upload-excel', permission_classes=[IsSuperUser])
+    def upload_excel(self, request):
+        file = request.FILES.get('file')
+        if not file:
+            return Response({"message": "No file was uploaded"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        self.process_excel(file)
+        return Response({"message": "Excel file has been processed successfully"}, status=status.HTTP_200_OK)
+    
+    def process_excel(self, excel_file):
+        df = pd.read_excel(excel_file, engine='openpyxl')
+        school_name = df.iloc[0]['School Name']
+        city = df.iloc[0]['City']
+        school_email = df.iloc[0]['Email']
+
+        school, created = School.objects.get_or_create(
+            name=school_name,
+            defaults={
+                'city': city,
+                'email': school_email
+            }
+        )
+
+        # Extract the supervisor information
+        supervisor_first_name = df.iloc[2]['School Name']
+        supervisor_last_name = df.iloc[2]['City']
+        supervisor_email = df.iloc[2]['Email']
+        supervisor_phone = df.iloc[2]['Unnamed: 3']
+
+        supervisor, created = User.objects.get_or_create(
+            email=supervisor_email,
+            defaults={
+                'first_name': supervisor_first_name,
+                'last_name': supervisor_last_name,
+                'role': 'supervisor',
+                'is_active': True,
+                'phone_number': supervisor_phone if pd.notna(supervisor_phone) else ''
+            }
+        )
+        if created:
+            supervisor.is_active = False
+            supervisor.activation_token = uuid.uuid4()
+            password = generate_password()
+            supervisor.set_password(password)
+            supervisor.save()
+            send_activation_email.delay(supervisor.pk, password)
+
+        school.supervisor = supervisor
+        school.save()
+
+        # Extract the class and student information
+        df_students = pd.read_excel(excel_file, engine='openpyxl', skiprows=4)
+        new_user_ids = []
+        for idx, row in df_students.iterrows():
+            if pd.notna(row['Class']):
+                class_info = row['Class']
+                grade = int(''.join(filter(str.isdigit, class_info)))
+                section = ''.join(filter(str.isalpha, class_info))
+                language = row['Language']
+
+                school_class, created = Class.objects.get_or_create(
+                    school=school,
+                    grade=grade,
+                    section=section,
+                    defaults={'language': language}
+                )
+
+            if pd.notna(row['Student Firstname']):
+                student_first_name = row['Student Firstname']
+                student_last_name = row['Student Lastname']
+                student_email = row['Email']
+                student_phone = row['Phone(optional)']
+                birth_date = row['Birthdate']
+
+                user, created = User.objects.get_or_create(
+                    email=student_email,
+                    defaults={
+                        'first_name': student_first_name,
+                        'last_name': student_last_name,
+                        'role': 'student',
+                        'is_active': True,
+                        'phone_number': student_phone if pd.notna(student_phone) else ''
+                    }
+                )
+                if created:
+                    user.is_active = False
+                    user.activation_token = uuid.uuid4()
+                    user.save()
+                    new_user_ids.append(user.pk)
+
+
+                Student.objects.get_or_create(
+                    user=user,
+                    school_class=school_class,
+                    school=school,
+                    grade=grade,
+                    defaults={
+                        'language': language,
+                        'birth_date': birth_date,
+                    }
+                )
+                if new_user_ids:
+                    send_mass_activation_email.delay(new_user_ids)
 
 
 
@@ -429,10 +537,6 @@ class AllStudentsView(APIView):
         return Response(sorted_combined_data, status=status.HTTP_200_OK)
         
 
-
-
-        
-
 class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = MyTokenObtainPairSerializer
 
@@ -441,6 +545,7 @@ class CurrentUserView(APIView):
 
     def get(self, request):
         data = {}
+        has_subscription = hasattr(request.user, 'subscription')
         if request.user.is_student:
             student = Student.objects.get(user=request.user)
             tasks_completed = request.user.completed_tasks.count()
@@ -459,7 +564,8 @@ class CurrentUserView(APIView):
                 'stars': student.stars,
                 'is_superuser': request.user.is_superuser,
                 'is_staff': request.user.is_staff,
-                'tasks_completed': tasks_completed
+                'tasks_completed': tasks_completed,
+                'has_subscription': has_subscription
             }
         elif request.user.is_parent:
             parent = request.user.parent
@@ -472,7 +578,8 @@ class CurrentUserView(APIView):
                 'role': request.user.role,
                 'children': ChildSerializer(children, many=True).data,
                 'is_superuser': request.user.is_superuser,
-                'is_staff': request.user.is_staff
+                'is_staff': request.user.is_staff,
+                'has_subscription': has_subscription
             }
 
         elif request.user.is_supervisor:
