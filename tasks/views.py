@@ -53,7 +53,7 @@ class CourseViewSet(viewsets.ModelViewSet):
 class SectionViewSet(viewsets.ModelViewSet):
     queryset = Section.objects.all()
     serializer_class = SectionSerializer
-    permission_classes = [HasSubscription, IsSuperUserOrStaffOrReadOnly]
+    permission_classes = [IsSuperUserOrStaffOrReadOnly]
 
     def get_queryset(self):
         return Section.objects.filter(course_id=self.kwargs['course_pk']).order_by('order')
@@ -87,7 +87,7 @@ class SectionViewSet(viewsets.ModelViewSet):
 class ContentViewSet(viewsets.ModelViewSet):
     queryset = Content.objects.all()
     serializer_class = ContentSerializer
-    permission_classes = [HasSubscription, IsSuperUserOrStaffOrReadOnly]
+    permission_classes = [IsSuperUserOrStaffOrReadOnly]
 
     def get_queryset(self):
         return Content.objects.filter(section_id=self.kwargs['section_pk']).order_by('order')
