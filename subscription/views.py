@@ -4,7 +4,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
 from account.permissions import IsParent, IsStudent, IsSuperUser
 from .models import Plan, Subscription
-from .serializers import PlanSerializer, SubscriptionSerializer, SubscriptionCreateSerializer
+from .serializers import PlanSerializer, SubscriptionModelSerializer, SubscriptionCreateSerializer
 
 class PlanViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Plan.objects.filter(is_enabled=True)
@@ -12,7 +12,7 @@ class PlanViewSet(viewsets.ReadOnlyModelViewSet):
 
 class SubscriptionViewSet(viewsets.ModelViewSet):
     queryset = Subscription.objects.all()
-    serializer_class = SubscriptionSerializer
+    serializer_class = SubscriptionModelSerializer
     permission_classes = [IsAuthenticated]
 
     def get_permissions(self):
@@ -32,10 +32,11 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         plan_name = request.data.get('plan_name')
         serializer = SubscriptionCreateSerializer(data={'plan_name': plan_name}, context={'request': request})
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        if serializer.is_valid(raise_exception=True):
+            subscription = serializer.save()
+            print(subscription)
+            return Response(self.serializer_class(subscription).data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def update(self, request, *args, **kwargs):
         raise PermissionDenied("You do not have permission to update subscriptions.")

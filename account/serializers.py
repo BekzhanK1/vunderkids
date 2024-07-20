@@ -240,14 +240,31 @@ class ChildSerializer(serializers.ModelSerializer):
     email = serializers.SerializerMethodField()
     tasks_completed = serializers.SerializerMethodField()
     has_subscription = serializers.SerializerMethodField()
+    is_free_trial = serializers.SerializerMethodField()
 
 
     class Meta:
         model = Child       
         fields = '__all__'
+
+    def check_subscription_and_free_trial(self, obj):
+        parent = obj.parent
+        has_subscription = hasattr(parent.user, 'subscription')
+        active_subscription = parent.user.subscription if has_subscription else None
+        is_free_trial = False
+        if active_subscription:
+            subscription_active = active_subscription.is_active
+            is_free_trial = active_subscription.plan.duration == 'free-trial'
+        return subscription_active, is_free_trial
     
     def get_has_subscription(self, obj):
-        return hasattr(obj.parent.user, 'subscription')
+        subscription_active, is_free_trial = self.check_subscription_and_free_trial(obj)
+        return subscription_active
+    
+    def get_is_free_trial(self, obj):
+        subscription_active, is_free_trial = self.check_subscription_and_free_trial(obj)
+        return is_free_trial
+    
     def get_tasks_completed(self, obj):
         return obj.completed_tasks.count()
     def get_email(self, obj):
@@ -265,7 +282,6 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
 
         try:
             if self.user.is_student:
-                has_subscription = hasattr(self.user, 'subscription')
                 student = Student.objects.get(user=self.user)
                 grade = student.grade
                 avatar_url = student.avatar.url if student.avatar else None
@@ -285,11 +301,9 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
                     'stars': student.stars,
                     'is_superuser': self.user.is_superuser,
                     'is_staff': self.user.is_staff,
-                    'has_subscription': has_subscription
                 }
             elif self.user.is_parent:
                 parent = self.user.parent
-                has_subscription = hasattr(self.user, 'subscription')
                 children = Child.objects.filter(parent=parent)
                 data['user'] = {
                     'id': self.user.id,
@@ -300,7 +314,6 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
                     'children': ChildSerializer(children, many=True).data,
                     'is_superuser': self.user.is_superuser,
                     'is_staff': self.user.is_staff,
-                    'has_subscription': has_subscription
                 }
             elif self.user.is_superuser:
                 data['user'] = {

@@ -37,7 +37,7 @@ app.conf.beat_schedule = {
     },
     'delete-expired-subscriptions-every-night': {
         'task': 'account.tasks.delete_expired_subscriptions',
-        'schedule': crontab(hour=1, minute=40),
+        'schedule': crontab(hour=2, minute=2),
     },
 }
 

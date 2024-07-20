@@ -38,10 +38,14 @@ class IsSupervisor(IsAuthenticated):
     
 class HasSubscription(IsAuthenticated):
     def has_permission(self, request, view):
+        if not super().has_permission(request, view):
+            return False
+
         if request.user.is_student or request.user.is_parent:
-            has_subscription = hasattr(request.user, 'subscription')
-            if not has_subscription:
+            if not hasattr(request.user, 'subscription'):
                 raise PermissionDenied("You do not have an active subscription.")
-            return True
-        else:
-            return True
+
+            if not request.user.subscription.is_active:
+                raise PermissionDenied("You do not have an active subscription.")
+            
+        return True

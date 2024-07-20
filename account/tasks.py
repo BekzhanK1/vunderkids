@@ -140,10 +140,12 @@ def check_streaks():
 
 @shared_task
 def delete_expired_subscriptions():
-    now = timezone.now()
-    expired_subscriptions = Subscription.objects.filter(end_date__lt=now)
+    subscriptions = Subscription.objects.all()
+
+    inactive_subscriptions = [sub for sub in subscriptions if not sub.is_active]
+
     datatuple = []
-    for subscription in expired_subscriptions:
+    for subscription in inactive_subscriptions:
         user = subscription.user
         context = {'user': user}
         html_message = render_to_string('subscription_expired_email.html', context)
@@ -156,10 +158,15 @@ def delete_expired_subscriptions():
             [user.email]
         )
         datatuple.append(msg)
-    
+
+    # Send all emails
     send_mass_html_mail(datatuple, fail_silently=False)
-    count = expired_subscriptions.count()
-    expired_subscriptions.delete()
+
+    # Delete expired subscriptions
+    count = len(inactive_subscriptions)
+    for subscription in inactive_subscriptions:
+        subscription.delete()
+
     return f"Deleted {count} expired subscriptions"
 
 
