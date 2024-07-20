@@ -40,7 +40,7 @@ def send_daily_email_to_all_students():
         )
         datatuple.append(msg)
     
-    send_mass_html_mail(datatuple, fail_silently=False)
+    # send_mass_html_mail(datatuple, fail_silently=False)
 
 @shared_task
 def send_daily_email_to_all_parents():
@@ -64,7 +64,7 @@ def send_daily_email_to_all_parents():
             )
             datatuple.append(msg)
     
-    send_mass_html_mail(datatuple, fail_silently=False)
+    # send_mass_html_mail(datatuple, fail_silently=False)
 
 
 @shared_task
