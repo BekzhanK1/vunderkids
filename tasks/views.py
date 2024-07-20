@@ -17,7 +17,7 @@ from django.utils import timezone
 class CourseViewSet(viewsets.ModelViewSet):
     queryset = Course.objects.all()
     serializer_class = CourseSerializer
-    permission_classes = [HasSubscription, IsSuperUserOrStaffOrReadOnly]
+    permission_classes = [IsSuperUserOrStaffOrReadOnly]
 
     def list(self, request):
         user = request.user
