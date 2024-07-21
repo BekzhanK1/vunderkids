@@ -90,6 +90,7 @@ class ResetPassword(APIView):
             return Response('Invalid reset link!', status=status.HTTP_400_BAD_REQUEST)
 
 class StaffRegistrationAPIView(APIView):
+    print("Hello")
     permission_classes = [IsSuperUser]
     def post(self, request):
         data = request.data
