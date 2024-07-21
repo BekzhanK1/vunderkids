@@ -558,6 +558,7 @@ class CurrentUserView(APIView):
 
     def get(self, request):
         data = {}
+        print("TESTING")
         has_subscription = hasattr(request.user, 'subscription')
         active_subscription = request.user.subscription if has_subscription else None
         is_free_trial = False
