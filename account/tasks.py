@@ -131,26 +131,30 @@ def check_streaks():
     now = timezone.now()
     today = now.date()
 
-    students = Student.objects.all().select_related('user')
+    students = Student.objects.all()
     for student in students:
         if student.last_task_completed_at:
             last_date = student.last_task_completed_at.date()
             if today > last_date and today != (last_date + timedelta(days=1)):
                 student.streak = 0
                 student.save()
+        else:
+            student.streak = 0
+            student.save()
     
     # Adjust query to prefetch related user through parent
-    parents_with_children = Parent.objects.prefetch_related(
-        Prefetch('children', queryset=Child.objects.all())
-    ).select_related('user')
+    parents = Parent.objects.all()
 
-    for parent in parents_with_children:
+    for parent in parents:
         for child in parent.children.all():
             if child.last_task_completed_at:
                 last_date = child.last_task_completed_at.date()
                 if today > last_date and today != (last_date + timedelta(days=1)):
                     child.streak = 0
                     child.save()
+            else:
+                child.streak = 0
+                child.save()
 
 
 @shared_task
