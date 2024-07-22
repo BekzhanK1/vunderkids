@@ -126,6 +126,14 @@ def send_password_reset_request_email(user_id):
 
 
 
+def is_losing_streak(last_date):
+    now = timezone.now()
+    today = now.date()
+
+    if last_date != today:
+        return True
+    return False
+
 @shared_task
 def check_streaks():
     now = timezone.now()
@@ -135,23 +143,25 @@ def check_streaks():
     for student in students:
         if student.last_task_completed_at:
             last_date = student.last_task_completed_at.date()
-            if today > last_date and today != (last_date + timedelta(days=1)):
+            if is_losing_streak(last_date):
                 student.streak = 0
                 student.save()
+            else:
+                return
         else:
             student.streak = 0
             student.save()
     
-    # Adjust query to prefetch related user through parent
     parents = Parent.objects.all()
-
     for parent in parents:
         for child in parent.children.all():
             if child.last_task_completed_at:
                 last_date = child.last_task_completed_at.date()
-                if today > last_date and today != (last_date + timedelta(days=1)):
+                if is_losing_streak(last_date):
                     child.streak = 0
                     child.save()
+                else:
+                    return
             else:
                 child.streak = 0
                 child.save()
