@@ -84,6 +84,7 @@ class ResetPassword(APIView):
             if user.is_reset_password_token_expired:
                 return Response('Your reset password link has expired!', status=status.HTTP_403_FORBIDDEN)
             user.set_password(password)
+            user.reset_password_token = None
             user.save()
             return Response({"message": "Successfully resseted password"}, status=status.HTTP_200_OK)
         except User.DoesNotExist:
