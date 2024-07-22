@@ -110,7 +110,7 @@ def send_activation_email(user_id, password):
 @shared_task
 def send_password_reset_request_email(user_id):
     user = User.objects.get(pk=user_id)
-    reset_password_url = f"{frontend_url}/reset-password/{user.activation_token}/"
+    reset_password_url = f"{frontend_url}/reset-password/{user.reset_password_token}/"
     context = {'user': user, 'reset_password_url': reset_password_url}
     subject = 'Password reset Vunderkids account'
     html_message = render_to_string('password_reset_request_email.html', context)
