@@ -1,16 +1,21 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
+
         body {
-            font-family: 'Arial', sans-serif;
+            font-family: 'Montserrat', Arial, Helvetica, sans-serif;
+            color-scheme: light dark;
             margin: 0;
             padding: 20px;
             color: #333;
             background-color: #f4f4f9;
         }
+
         .container {
             background-color: #fff;
             border: 1px solid #ddd;
@@ -19,13 +24,12 @@
             max-width: 600px;
             margin: 0 auto;
         }
-        h1 {
-            color: #4A90E2;
-        }
+
         p {
             font-size: 16px;
             line-height: 1.5;
         }
+
         .footer {
             text-align: center;
             margin-top: 20px;
@@ -34,16 +38,19 @@
         }
     </style>
 </head>
+
 <body>
     <div class="container">
-        <h1>Hello {{ first_name }} {{ last_name }},</h1>
-        <p>Here is your daily update from Vunderkids:</p>
-        <p>Your current Cups are: <strong>{{ current_cups }}</strong> and Level: <strong>{{ level }}</strong></p>
-        <p>Keep up the great work and strive to achieve even more!</p>
+        <img src="https://i.postimg.cc/7Yk7ZJgr/logo-blue.png" alt="logo" style="width: 200px; height: 55px;">
+        <h1>Здравстуйте {{ first_name }} {{ last_name }}!</h1>
+        <p>Ваш ежедневный отчет от Vunderkids:</p>
+        <p>У вас сейчас кубков: <strong>{{ current_cups }}</strong> Ваш уровень: <strong>{{ level }}</strong></p>
+        <p>Продолжайте в том же духе и никогда не переставайте стараться дальше!</p>
         <div class="footer">
-            <p>Have a great day!</p>
-            <p>Vunderkids Team</p>
+            <p>Всего доброго!</p>
+            <p>Команда Vunderkids</p>
         </div>
     </div>
 </body>
+
 </html>
