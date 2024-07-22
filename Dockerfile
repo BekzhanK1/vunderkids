@@ -24,4 +24,4 @@ EXPOSE 8000
 
 
 # Default command to run both Gunicorn and Celery
-CMD ["sh", "-c", "gunicorn vunderkids.wsgi --bind 0.0.0.0:8000 & celery -A vunderkids worker --loglevel=info & celery -A vunderkids beat --loglevel=info"]
+CMD ["sh", "-c", "gunicorn vunderkids.wsgi --bind 0.0.0.0:8000"]
