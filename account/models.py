@@ -5,6 +5,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.core.validators import RegexValidator
 from django.conf import settings
+from datetime import timedelta
 
 
 GRADE_CHOICES = [(i, str(i)) for i in range(0, 5)]
@@ -60,6 +61,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)
     is_superuser = models.BooleanField(default=False)
     activation_token = models.UUIDField(default=uuid.uuid4, editable=False, null=True, blank=True)
+    activation_token_expires_at = models.DateTimeField(null=True, blank=True, default=timezone.now() + timedelta(days=1))
+
+    reset_password_token = models.UUIDField(default=uuid.uuid4, editable=False, null=True, blank=True)
+    reset_password_token_expires_at = models.DateTimeField(null=True, blank=True, default=timezone.now() + timedelta(days=1))
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
@@ -76,7 +81,17 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     @property
     def is_supervisor(self):
-        return self.role == 'supervisor'  # Added 'is_supervisor' property
+        return self.role == 'supervisor'
+    
+    @property
+    def is_activation_token_expired(self):
+        return self.activation_token_expires_at < timezone.now()
+    
+    @property
+    def is_reset_password_token_expired(self):
+        return self.reset_password_token_expires_at < timezone.now()
+    
+    
 
 class School(models.Model):
     name = models.CharField(max_length=150)

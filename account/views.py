@@ -8,25 +8,35 @@ from rest_framework.permissions import AllowAny
 from django.shortcuts import get_object_or_404
 from django.contrib.auth import authenticate
 from django.conf import settings
-from django.core import cache
 from account.serializers import *
 from account.models import *
 from account.permissions import *
 from tasks.models import TaskCompletion
-from .tasks import send_mass_activation_email, send_password_reset_request_email
+from .tasks import send_mass_activation_email, send_password_reset_request_email, send_activation_email
 import uuid
 from datetime import timedelta, datetime
 from subscription.models import Plan, Subscription
 from .utils import generate_password
+from subscription.models import Subscription
 class ActivateAccount(APIView):
     def get(self, request, token):
         try:
             user = User.objects.get(activation_token=token)
+            if user.is_activation_token_expired:
+                user.activation_token = uuid.uuid4()
+                user.activation_token_expires_at = timezone.now() + timedelta(days=1)
+                user.save()
+                send_activation_email.delay(user.pk, generate_password())
+                return Response('Your activation link has expired! You will receive new email soon', status=status.HTTP_403_FORBIDDEN)
             user.is_active = True
             user.activation_token = None
             user.save()
-            plan, created = Plan.objects.get_or_create(duration='free_trial')
-            Subscription.objects.create(user=user, plan=plan)
+            if user.is_parent:
+                plan, created = Plan.objects.get_or_create(duration='free-trial')
+                Subscription.objects.create(user=user, plan=plan)
+            elif user.is_student:
+                plan, created = Plan.objects.get_or_create(duration='annual')
+                Subscription.objects.create(user=user, plan=plan)
             return Response('Your account has been activated successfully!', status=status.HTTP_200_OK)
         except User.DoesNotExist:
             return Response('Invalid activation link!', status=status.HTTP_400_BAD_REQUEST)
@@ -56,7 +66,8 @@ class RequestResetPassword(APIView):
         if 'email' in data:
             email = data['email']
             user = get_object_or_404(User, email=email)
-            user.activation_token = uuid.uuid4()
+            user.reset_password_token = uuid.uuid4()
+            user.reset_password_token_expires_at = timezone.now() + timedelta(days=1)
             user.save()
             send_password_reset_request_email.delay(user.pk)
             return Response({"message": "Request has been sent to email"}, status=status.HTTP_201_CREATED)
@@ -69,7 +80,9 @@ class ResetPassword(APIView):
         try:
             data = request.data
             password = data['password']
-            user = User.objects.get(activation_token=token)
+            user = User.objects.get(reset_password_token=token)
+            if user.is_reset_password_token_expired:
+                return Response('Your reset password link has expired!', status=status.HTTP_403_FORBIDDEN)
             user.set_password(password)
             user.save()
             return Response({"message": "Successfully resseted password"}, status=status.HTTP_200_OK)
@@ -546,6 +559,12 @@ class CurrentUserView(APIView):
     def get(self, request):
         data = {}
         has_subscription = hasattr(request.user, 'subscription')
+        active_subscription = request.user.subscription if has_subscription else None
+        is_free_trial = False
+        if active_subscription:
+            subscription_active = active_subscription.is_active
+            is_free_trial = active_subscription.plan.duration == 'free-trial'
+
         if request.user.is_student:
             student = Student.objects.get(user=request.user)
             tasks_completed = request.user.completed_tasks.count()
@@ -565,7 +584,8 @@ class CurrentUserView(APIView):
                 'is_superuser': request.user.is_superuser,
                 'is_staff': request.user.is_staff,
                 'tasks_completed': tasks_completed,
-                'has_subscription': has_subscription
+                'has_subscription': subscription_active,
+                'is_free_trial': is_free_trial
             }
         elif request.user.is_parent:
             parent = request.user.parent
@@ -579,7 +599,8 @@ class CurrentUserView(APIView):
                 'children': ChildSerializer(children, many=True).data,
                 'is_superuser': request.user.is_superuser,
                 'is_staff': request.user.is_staff,
-                'has_subscription': has_subscription
+                'has_subscription': subscription_active,
+                'is_free_trial': is_free_trial
             }
 
         elif request.user.is_supervisor:
