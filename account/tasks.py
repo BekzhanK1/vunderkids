@@ -132,8 +132,6 @@ def check_streaks():
     current_time = now.time()
     
     # Check if the current time is past 23:50
-    if current_time < time(23, 50):
-        return  # Exit the task if the current time is before 23:50
     
     today = now.date()
     students = Student.objects.all().select_related('user')
@@ -183,3 +181,8 @@ def delete_expired_subscriptions():
         subscription.delete()
 
     return f"Deleted {count} expired subscriptions"
+
+@shared_task
+def example_task():
+    for i in range(1000):
+        print("HELLO")
