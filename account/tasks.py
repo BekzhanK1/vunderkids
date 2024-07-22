@@ -1,19 +1,15 @@
 from celery import shared_task
-from django.core.mail import EmailMultiAlternatives
+from django.core.mail import EmailMultiAlternatives, get_connection
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
 from django.conf import settings
 from account.models import Child, Student, Parent, User
 from subscription.models import Subscription
 from account.utils import generate_password, render_email
-from django.template.loader import render_to_string
-from django.utils.html import strip_tags
-from django.core.mail import send_mail, send_mass_mail
-from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from datetime import timedelta
-from django.core.mail import EmailMultiAlternatives, get_connection
 
 frontend_url = settings.FRONTEND_URL
-
 
 
 def send_mass_html_mail(datatuple, fail_silently=False):
@@ -25,9 +21,10 @@ def send_mass_html_mail(datatuple, fail_silently=False):
     connection = get_connection(fail_silently=fail_silently)
     return connection.send_messages(messages)
 
+
 @shared_task
 def send_daily_email_to_all_students():
-    students = Student.objects.all()
+    students = Student.objects.all().select_related('user')
     datatuple = []
     for student in students:
         html_content, text_content = render_email(student.user.first_name, student.user.last_name, student.cups, student.level)
@@ -42,9 +39,10 @@ def send_daily_email_to_all_students():
     
     send_mass_html_mail(datatuple, fail_silently=False)
 
+
 @shared_task
 def send_daily_email_to_all_parents():
-    parents = Parent.objects.prefetch_related('children').all()
+    parents = Parent.objects.prefetch_related('children').select_related('user').all()
     datatuple = []
     for parent in parents:
         if parent.user.is_active:
@@ -93,11 +91,9 @@ def send_mass_activation_email(user_ids):
     send_mass_html_mail(datatuple, fail_silently=False)
 
 
-
 @shared_task
 def send_activation_email(user_id, password):
     user = User.objects.get(pk=user_id)
-    print(user)
     activation_url = f"{frontend_url}activate/{user.activation_token}/"
     context = {'user': user, 'activation_url': activation_url, 'password': password}
     subject = 'Activate your Vunderkids Account'
@@ -105,7 +101,11 @@ def send_activation_email(user_id, password):
     plain_message = strip_tags(html_message)
     from_email = settings.DEFAULT_FROM_EMAIL
     to = user.email
-    send_mail(subject, plain_message, from_email, [to], html_message=html_message)
+
+    msg = EmailMultiAlternatives(subject, plain_message, from_email, [to])
+    msg.attach_alternative(html_message, "text/html")
+    msg.send()
+
 
 @shared_task
 def send_password_reset_request_email(user_id):
@@ -117,19 +117,24 @@ def send_password_reset_request_email(user_id):
     plain_message = strip_tags(html_message)
     from_email = settings.DEFAULT_FROM_EMAIL
     to = user.email
-    send_mail(subject, plain_message, from_email, [to], html_message=html_message)
+
+    msg = EmailMultiAlternatives(subject, plain_message, from_email, [to])
+    msg.attach_alternative(html_message, "text/html")
+    msg.send()
+
+
 
 @shared_task
 def check_streaks():
     now = timezone.now().date()
-    students = Student.objects.all()
+    students = Student.objects.all().select_related('user')
     for student in students:
         if student.last_task_completed_at:
             last_date = student.last_task_completed_at.date()
             if now > last_date and now != (last_date + timedelta(days=1)):
                 student.streak = 0
                 student.save()
-    children = Child.objects.all()
+    children = Child.objects.all().select_related('user')
     for child in children:
         if child.last_task_completed_at:
             last_date = child.last_task_completed_at.date()
@@ -140,7 +145,7 @@ def check_streaks():
 
 @shared_task
 def delete_expired_subscriptions():
-    subscriptions = Subscription.objects.all()
+    subscriptions = Subscription.objects.all().select_related('user')
 
     inactive_subscriptions = [sub for sub in subscriptions if not sub.is_active]
 
@@ -168,8 +173,3 @@ def delete_expired_subscriptions():
         subscription.delete()
 
     return f"Deleted {count} expired subscriptions"
-
-
-
-
-    
