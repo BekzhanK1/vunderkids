@@ -46,6 +46,8 @@ def send_daily_email_to_all_parents():
     datatuple = []
     for parent in parents:
         if parent.user.is_active:
+            if parent.children.all().count() == 0:
+                return
             context = {
                 'first_name': parent.user.first_name,
                 'last_name': parent.user.last_name,
