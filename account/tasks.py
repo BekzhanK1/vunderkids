@@ -7,7 +7,7 @@ from account.models import Child, Student, Parent, User
 from subscription.models import Subscription
 from account.utils import generate_password, render_email
 from django.utils import timezone
-from datetime import timedelta
+from datetime import timedelta, time
 
 frontend_url = settings.FRONTEND_URL
 
@@ -126,19 +126,27 @@ def send_password_reset_request_email(user_id):
 
 @shared_task
 def check_streaks():
-    now = timezone.now().date()
+    now = timezone.now()
+    current_time = now.time()
+    
+    # Check if the current time is past 23:50
+    if current_time < time(23, 50):
+        return  # Exit the task if the current time is before 23:50
+    
+    today = now.date()
     students = Student.objects.all().select_related('user')
     for student in students:
         if student.last_task_completed_at:
             last_date = student.last_task_completed_at.date()
-            if now > last_date and now != (last_date + timedelta(days=1)):
+            if today > last_date and today != (last_date + timedelta(days=1)):
                 student.streak = 0
                 student.save()
+    
     children = Child.objects.all().select_related('user')
     for child in children:
         if child.last_task_completed_at:
             last_date = child.last_task_completed_at.date()
-            if now > last_date and now != (last_date + timedelta(days=1)):
+            if today > last_date and today != (last_date + timedelta(days=1)):
                 child.streak = 0
                 child.save()
 
