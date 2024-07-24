@@ -114,6 +114,7 @@ class ParentRegistrationAPIView(APIView):
                 "message": f"Вам было отправлено письмо активаций по адресу {data['email']}",
                 "parent_id": parent.pk
             }, status=status.HTTP_201_CREATED)
+        print(serializer.errors)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class SchoolViewSet(viewsets.ModelViewSet):

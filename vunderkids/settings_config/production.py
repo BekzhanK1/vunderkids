@@ -3,13 +3,14 @@
 from .base import *
 import dj_database_url
 
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = [
     'https://vunderkids.kz', 'https://www.vunderkids.kz',
     'http://85.198.90.24', 'http://localhost', 'http://127.0.0.1',
-    'vunderkids.kz', 'www.vunderkids.kz', 'api.vunderkids.kz'
+    'vunderkids.kz', 'www.vunderkids.kz', 'api.vunderkids.kz', '85.198.90.24'
 ]
+
 
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = [

@@ -24,5 +24,4 @@ EXPOSE 8000
 
 
 # Default command to run both Gunicorn and Celery
-CMD ["sh", "-c", "gunicorn vunderkids.wsgi --bind 0.0.0.0:8000 --workers 4"]
-
+CMD ["sh", "-c", "python manage.py makemigrations && python manage.py migrate && gunicorn vunderkids.wsgi --bind 0.0.0.0:8000 --workers 4"]
