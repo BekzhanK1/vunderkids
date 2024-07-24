@@ -325,11 +325,17 @@ class QuestionViewSet(viewsets.ModelViewSet):
                 child=child if child else None,
                 task=task
             )
+            if task_completion.correct == correct_answers and task_completion.wrong == wrong_answers:
+                return {
+                    "message": "Answer proccessed, but no reward is given",
+                    "is_correct": is_correct
+                }
             task_completion.correct = correct_answers
             task_completion.wrong = wrong_answers
             task_completion.save()
-            
+        
             print("Task completed")
+
             entity.update_streak()
 
         return {
