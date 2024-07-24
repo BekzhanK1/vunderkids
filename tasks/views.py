@@ -245,6 +245,9 @@ class QuestionViewSet(viewsets.ModelViewSet):
         child_id = request.data.get('child_id')
         answer_text = request.data.get('answer')
 
+        if not answer_text:
+            return Response({"message": "Answer is required"}, status=status.HTTP_400_BAD_REQUEST)
+
         # Fetch the correct answer status
         is_correct = self.validate_answer(question, answer_text)
 
@@ -317,13 +320,15 @@ class QuestionViewSet(viewsets.ModelViewSet):
 
 
         if answered_questions == total_questions:
-            TaskCompletion.objects.get_or_create(
+            task_completion, created = TaskCompletion.objects.get_or_create(
                 user=user if user else None,
                 child=child if child else None,
-                task=task,
-                correct=correct_answers,
-                wrong=wrong_answers
+                task=task
             )
+            task_completion.correct = correct_answers
+            task_completion.wrong = wrong_answers
+            task_completion.save()
+            
             print("Task completed")
             entity.update_streak()
 

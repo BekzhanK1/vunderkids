@@ -283,6 +283,7 @@ class ContentSerializer(serializers.ModelSerializer):
         if obj.content_type == "task":
             user = request.user
             child_id = request.query_params.get('child_id')
+            questions_number = Question.objects.filter(task=obj).count()
 
             if user.is_student:
                 task_completion = TaskCompletion.objects.filter(user=user, task=obj).first()
@@ -291,7 +292,7 @@ class ContentSerializer(serializers.ModelSerializer):
                 answers = Answer.objects.filter(user=user, question__task=obj)
                 if not answers.exists():
                     return False
-                if task_completion.wrong + task_completion.correct == answers.count():
+                if task_completion.wrong + task_completion.correct == answers.count() == questions_number:
                     return True
             elif user.is_parent and child_id:
                 child = get_object_or_404(Child, parent=user.parent, pk=child_id)
@@ -301,7 +302,8 @@ class ContentSerializer(serializers.ModelSerializer):
                 answers = Answer.objects.filter(child=child, question__task=obj)
                 if not answers.exists():
                     return False
-                if task_completion.wrong + task_completion.correct == answers.count():
+                print(task_completion.wrong + task_completion.correct, answers.count())
+                if task_completion.wrong + task_completion.correct == answers.count() == questions_number:
                     return True
             else:
                 return None
