@@ -119,7 +119,7 @@ class TaskCompletion(models.Model):
     completed_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ('user', 'child', 'task')
+        unique_together = (('user', 'task'), ('child', 'task'))
 
     def __str__(self):
         

@@ -9,7 +9,6 @@ class RateLimitMiddleware:
 
     def __call__(self, request):
         ip_address = request.META.get('REMOTE_ADDR')
-        print(ip_address)
         current_time = time.time()
         time_window = 60  # 1 minute
         max_requests = 100  # limit to 100 requests per minute
@@ -17,12 +16,10 @@ class RateLimitMiddleware:
         if ip_address not in self.visitors:
             self.visitors[ip_address] = []
 
-        print(self.visitors)
         
         # Filter out timestamps older than the time window
         self.visitors[ip_address] = [timestamp for timestamp in self.visitors[ip_address] if timestamp > current_time - time_window]
         
-        print(len(self.visitors[ip_address]))
         if len(self.visitors[ip_address]) >= max_requests:
             return HttpResponse("Too many requests", status=429)
         
