@@ -336,11 +336,22 @@ class SectionSerializer(serializers.ModelSerializer):
 
         user = request.user
         child_id = request.query_params.get('child_id')
+        count = 0
         if user.is_student:
-            return TaskCompletion.objects.filter(user=user, task__section=obj).count()
+            task_completions = TaskCompletion.objects.filter(user=user, task__section=obj)
+            for tc in task_completions:
+                questions = Question.objects.filter(task=tc.task)
+                if questions.count() == tc.correct + tc.wrong:
+                    count += 1
+            return count
         elif user.is_parent and child_id:
             child = get_object_or_404(Child, parent=user.parent, pk=child_id)
-            return TaskCompletion.objects.filter(child=child, task__section=obj).count()
+            task_completions = TaskCompletion.objects.filter(child=child, task__section=obj)
+            for tc in task_completions:
+                questions = Question.objects.filter(task=tc.task)
+                if questions.count() == tc.correct + tc.wrong:
+                    count += 1
+            return count
         return 0
 
     def get_percentage_completed(self, obj):
@@ -367,11 +378,22 @@ class SectionSummarySerializer(serializers.ModelSerializer):
 
         user = request.user
         child_id = request.query_params.get('child_id')
+        count = 0
         if user.is_student:
-            return TaskCompletion.objects.filter(user=user, task__section=obj).count()
+            task_completions = TaskCompletion.objects.filter(user=user, task__section=obj)
+            for tc in task_completions:
+                questions = Question.objects.filter(task=tc.task)
+                if questions.count() == tc.correct + tc.wrong:
+                    count += 1
+            return count
         elif user.is_parent and child_id:
             child = get_object_or_404(Child, parent=user.parent, pk=child_id)
-            return TaskCompletion.objects.filter(child=child, task__section=obj).count()
+            task_completions = TaskCompletion.objects.filter(child=child, task__section=obj)
+            for tc in task_completions:
+                questions = Question.objects.filter(task=tc.task)
+                if questions.count() == tc.correct + tc.wrong:
+                    count += 1
+            return count
         return 0
 
     def get_percentage_completed(self, obj):
@@ -399,11 +421,22 @@ class CourseSerializer(serializers.ModelSerializer):
 
         user = request.user
         child_id = request.query_params.get('child_id')
+        count = 0    
         if user.is_student:
-            return TaskCompletion.objects.filter(user=user, task__section__course=obj).count()
+            task_completions = TaskCompletion.objects.filter(user=user, task__section__course=obj)
+            for tc in task_completions:
+                questions = Question.objects.filter(task=tc.task)
+                if questions.count() == tc.correct + tc.wrong:
+                    count += 1
+            return count
         elif user.is_parent and child_id:
             child = get_object_or_404(Child, parent=user.parent, pk=child_id)
-            return TaskCompletion.objects.filter(child=child, task__section__course=obj).count()
+            task_completions = TaskCompletion.objects.filter(child=child, task__section__course=obj)
+            for tc in task_completions:
+                questions = Question.objects.filter(task=tc.task)
+                if questions.count() == tc.correct + tc.wrong:
+                    count += 1
+            return count
         return 0
 
     def get_percentage_completed(self, obj):
