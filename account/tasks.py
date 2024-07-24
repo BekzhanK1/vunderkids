@@ -3,11 +3,13 @@ from django.core.mail import EmailMultiAlternatives, get_connection
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from django.conf import settings
+from django.utils import timezone
 from account.models import Child, Student, Parent, User
 from subscription.models import Subscription
 from account.utils import generate_password, render_email
 from django.utils import timezone
 from datetime import timedelta, time
+import uuid
 
 frontend_url = settings.FRONTEND_URL
 
@@ -75,6 +77,8 @@ def send_mass_activation_email(user_ids):
     for user in users:
         password = generate_password()
         user.set_password(password)
+        user.activation_token = uuid.uuid4()
+        user.activation_token_expires_at = timezone.now() + timedelta(days=1)
         user.save()
         activation_url = f"{frontend_url}activate/{user.activation_token}/"
         context = {'user': user, 'activation_url': activation_url, 'password': password}
@@ -96,6 +100,9 @@ def send_mass_activation_email(user_ids):
 @shared_task
 def send_activation_email(user_id, password):
     user = User.objects.get(pk=user_id)
+    user.activation_token = uuid.uuid4()
+    user.activation_token_expires_at = timezone.now() + timedelta(days=1)
+    user.save()
     activation_url = f"{frontend_url}activate/{user.activation_token}/"
     context = {'user': user, 'activation_url': activation_url, 'password': password}
     subject = 'Activate your Vunderkids Account'

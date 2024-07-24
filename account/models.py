@@ -60,11 +60,11 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=False)
     is_staff = models.BooleanField(default=False)
     is_superuser = models.BooleanField(default=False)
-    activation_token = models.UUIDField(default=uuid.uuid4, editable=False, null=True, blank=True)
-    activation_token_expires_at = models.DateTimeField(null=True, blank=True, default=timezone.now() + timedelta(days=1))
+    activation_token = models.UUIDField(editable=False, null=True, blank=True)
+    activation_token_expires_at = models.DateTimeField(null=True, blank=True)
 
-    reset_password_token = models.UUIDField(default=uuid.uuid4, editable=False, null=True, blank=True)
-    reset_password_token_expires_at = models.DateTimeField(null=True, blank=True, default=timezone.now() + timedelta(days=1))
+    reset_password_token = models.UUIDField(editable=False, null=True, blank=True)
+    reset_password_token_expires_at = models.DateTimeField(null=True, blank=True)
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
