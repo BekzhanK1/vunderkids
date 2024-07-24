@@ -132,7 +132,7 @@ AUTHENTICATION_BACKENDS = [
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'Asia/Aqtau'
 USE_I18N = True
-USE_TZ = True
+USE_TZ = False
 
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
