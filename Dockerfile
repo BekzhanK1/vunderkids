@@ -27,7 +27,8 @@ RUN chmod +x /entrypoint.sh
 EXPOSE 8000
 
 # Set the entrypoint to the entrypoint script
-COPY entrypoint.sh /usr/local/bin/
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
 
 # Default command
