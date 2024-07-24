@@ -105,7 +105,8 @@ class Answer(models.Model):
     question = models.ForeignKey(Question, related_name='answers', on_delete=models.CASCADE)
     answer = models.TextField()
     is_correct = models.BooleanField()
-
+    class Meta:
+        unique_together = (('user', 'question'), ('child', 'question'))
     def __str__(self):
         return f"{self.user} - {self.question}"
 
@@ -117,7 +118,11 @@ class TaskCompletion(models.Model):
     wrong = models.PositiveSmallIntegerField(default=0)
     completed_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        unique_together = ('user', 'child', 'task')
+
     def __str__(self):
+        
         if self.user:
             return f"{self.user} - {self.task}"
         if self.child:
