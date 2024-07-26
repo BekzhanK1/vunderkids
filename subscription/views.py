@@ -10,6 +10,7 @@ class PlanViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Plan.objects.filter(is_enabled=True)
     serializer_class = PlanSerializer
 
+
 class SubscriptionViewSet(viewsets.ModelViewSet):
     queryset = Subscription.objects.all()
     serializer_class = SubscriptionModelSerializer
@@ -30,13 +31,10 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     def create(self, request, *args, **kwargs):
-        plan_name = request.data.get('plan_name')
-        serializer = SubscriptionCreateSerializer(data={'plan_name': plan_name}, context={'request': request})
-        if serializer.is_valid(raise_exception=True):
-            subscription = serializer.save()
-            print(subscription)
-            return Response(self.serializer_class(subscription).data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer = SubscriptionCreateSerializer(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        subscription = serializer.save()
+        return Response(self.serializer_class(subscription).data, status=status.HTTP_201_CREATED)
 
     def update(self, request, *args, **kwargs):
         raise PermissionDenied("You do not have permission to update subscriptions.")
