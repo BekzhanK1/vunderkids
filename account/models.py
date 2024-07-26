@@ -1,12 +1,9 @@
 from datetime import date, timedelta
 from django.utils import timezone
-import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.core.validators import RegexValidator
 from django.conf import settings
-from datetime import timedelta
-
 
 GRADE_CHOICES = [(i, str(i)) for i in range(0, 5)]
 SECTION_CHOICES = [(chr(i), chr(i)) for i in range(ord('А'), ord('Я') + 1)]
@@ -20,8 +17,6 @@ LANGUAGE_CHOICES = [
     ('kz', 'Kazakh'),
     ('en', 'English'),
 ]
-
-
 
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
@@ -49,8 +44,9 @@ class User(AbstractBaseUser, PermissionsMixin):
     ROLE_CHOICES = (
         ('student', 'Student'),
         ('parent', 'Parent'),
-        ('supervisor', 'Supervisor'),  # Added 'supervisor' role
+        ('supervisor', 'Supervisor'),
     )
+
     email = models.EmailField(unique=True, db_index=True)
     first_name = models.CharField(max_length=30)
     last_name = models.CharField(max_length=150)
@@ -60,11 +56,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=False)
     is_staff = models.BooleanField(default=False)
     is_superuser = models.BooleanField(default=False)
-    activation_token = models.UUIDField(default=uuid.uuid4, editable=False, null=True, blank=True)
-    activation_token_expires_at = models.DateTimeField(null=True, blank=True, default=timezone.now() + timedelta(days=1))
-
-    reset_password_token = models.UUIDField(default=uuid.uuid4, editable=False, null=True, blank=True)
-    reset_password_token_expires_at = models.DateTimeField(null=True, blank=True, default=timezone.now() + timedelta(days=1))
+    activation_token = models.UUIDField(editable=False, null=True, blank=True)
+    activation_token_expires_at = models.DateTimeField(null=True, blank=True)
+    reset_password_token = models.UUIDField(editable=False, null=True, blank=True)
+    reset_password_token_expires_at = models.DateTimeField(null=True, blank=True)
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
@@ -85,13 +80,14 @@ class User(AbstractBaseUser, PermissionsMixin):
     
     @property
     def is_activation_token_expired(self):
-        return self.activation_token_expires_at < timezone.now()
+        return self.activation_token_expires_at < timezone.now() if self.activation_token_expires_at else True
     
     @property
     def is_reset_password_token_expired(self):
-        return self.reset_password_token_expires_at < timezone.now()
-    
-    
+        return self.reset_password_token_expires_at < timezone.now() if self.reset_password_token_expires_at else True
+
+    def __str__(self):
+        return f"{self.email} - {self.get_role_display()}"
 
 class School(models.Model):
     name = models.CharField(max_length=150)
@@ -110,7 +106,6 @@ class Class(models.Model):
 
     def __str__(self):
         return f"{self.grade}{self.section}"
-    
 
 class LevelRequirement(models.Model):
     level = models.PositiveIntegerField(unique=True)
@@ -120,7 +115,7 @@ class LevelRequirement(models.Model):
         return f'Level {self.level}: {self.cups_required} cups'
 
 class Student(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='student', )
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='student')
     school_class = models.ForeignKey(Class, on_delete=models.SET_NULL, null=True, blank=True, related_name='students')
     school = models.ForeignKey(School, on_delete=models.SET_NULL, null=True, blank=True, related_name='students')
     grade = models.IntegerField(choices=GRADE_CHOICES)
@@ -132,14 +127,13 @@ class Student(models.Model):
     language = models.CharField(max_length=50, choices=LANGUAGE_CHOICES, default='ru')
     avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
     birth_date = models.DateField(default=date(2015, 1, 1), blank=True, null=True)
-    last_task_completed_at = models.DateTimeField(null=True, blank = True)
+    last_task_completed_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f"[Student: {self.pk}] {self.user.first_name} {self.user.last_name}"
     
     def update_level(self):
-        level_requirements = LevelRequirement.objects.order_by('level')
-        for requirement in level_requirements:
+        for requirement in LevelRequirement.objects.order_by('level'):
             if self.cups >= requirement.cups_required:
                 self.level = requirement.level
             else:
@@ -165,7 +159,7 @@ class Student(models.Model):
         self.cups += question_reward
         self.stars += question_reward
         self.save()
-            
+
 class Parent(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='parent')
 
@@ -185,11 +179,13 @@ class Child(models.Model):
     level = models.PositiveIntegerField(default=1)
     streak = models.PositiveIntegerField(default=0)
     birth_date = models.DateField(default=date(2015, 1, 1))
-    last_task_completed_at = models.DateTimeField(null=True, blank = True)
+    last_task_completed_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"[Child: {self.pk}] {self.first_name} {self.last_name}"
 
     def update_level(self):
-        level_requirements = LevelRequirement.objects.order_by('level')
-        for requirement in level_requirements:
+        for requirement in LevelRequirement.objects.order_by('level'):
             if self.cups >= requirement.cups_required:
                 self.level = requirement.level
             else:
@@ -198,7 +194,6 @@ class Child(models.Model):
 
     def update_streak(self):
         now = timezone.now()
-        print("update_streak")
         if self.last_task_completed_at:
             if now.date() == self.last_task_completed_at.date():
                 return
@@ -216,10 +211,3 @@ class Child(models.Model):
         self.cups += question_reward
         self.stars += question_reward
         self.save()
-
-    def __str__(self):
-        return f"[Child: {self.pk}] {self.first_name} {self.last_name}"
-    
-
-
-    

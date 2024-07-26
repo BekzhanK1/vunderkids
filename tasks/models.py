@@ -1,7 +1,6 @@
 from django.db import models
 from django.contrib.auth import get_user_model
-from account.models import Child
-from account.models import LANGUAGE_CHOICES, GRADE_CHOICES
+from account.models import Child, LANGUAGE_CHOICES, GRADE_CHOICES
 
 User = get_user_model()
 
@@ -24,10 +23,8 @@ class Section(models.Model):
     description = models.TextField(blank=True, null=True)
     order = models.IntegerField(default=0)
 
-
     class Meta:
         ordering = ['order']
-
 
     def save(self, *args, **kwargs):
         if self.order == 0:
@@ -60,7 +57,6 @@ class Content(models.Model):
         return f"Content: (Section: {self.section.title} | Order: {self.order})"
 
 class Lesson(Content):
-
     def __str__(self):
         return f"Lesson: {self.title}"
 
@@ -87,6 +83,7 @@ class Question(models.Model):
     correct_answer = models.JSONField()  
     template = models.CharField(default='1', max_length=20, blank=True, null=True)
     audio = models.FileField(upload_to='audio/', blank=True, null=True)
+
     def __str__(self):
         return f"[Task: {self.task}] {self.question_text}"
     
@@ -98,13 +95,15 @@ class Image(models.Model):
     def __str__(self):
         return f"Image for {self.question.id}"
 
-
 class Answer(models.Model):
     user = models.ForeignKey(User, null=True, blank=True, related_name='answers', on_delete=models.CASCADE)
     child = models.ForeignKey(Child, null=True, blank=True, related_name='answers', on_delete=models.CASCADE)
     question = models.ForeignKey(Question, related_name='answers', on_delete=models.CASCADE)
     answer = models.TextField()
     is_correct = models.BooleanField()
+
+    class Meta:
+        unique_together = (('user', 'question'), ('child', 'question'))
 
     def __str__(self):
         return f"{self.user} - {self.question}"
@@ -117,8 +116,8 @@ class TaskCompletion(models.Model):
     wrong = models.PositiveSmallIntegerField(default=0)
     completed_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        unique_together = (('user', 'task'), ('child', 'task'))
+
     def __str__(self):
-        if self.user:
-            return f"{self.user} - {self.task}"
-        if self.child:
-            return f"{self.child} - {self.task}"
+        return f"{self.user or self.child} - {self.task}"

@@ -1,12 +1,13 @@
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
-from .models import Course, Image, Section, Lesson, Content, Task, Question, TaskCompletion, Answer
+from .models import (
+    Course, Image, Section, Lesson, Content, Task, Question,
+    TaskCompletion, Answer
+)
 from account.models import Child
 
 class AnswerSerializer(serializers.Serializer):
     answer = serializers.CharField()
-
-
 
 class LessonSerializer(serializers.ModelSerializer):
     class Meta:
@@ -21,6 +22,7 @@ class LessonSummarySerializer(serializers.ModelSerializer):
 class ImageSerializer(serializers.ModelSerializer):
     id = serializers.SerializerMethodField()
     value = serializers.SerializerMethodField()
+
     class Meta:
         model = Image
         fields = ['id', 'value']
@@ -31,8 +33,6 @@ class ImageSerializer(serializers.ModelSerializer):
     def get_value(self, obj):
         return obj.image.url
 
-    
-
 class QuestionSerializer(serializers.ModelSerializer):
     is_attempted = serializers.SerializerMethodField()
     is_correct = serializers.SerializerMethodField()
@@ -41,7 +41,6 @@ class QuestionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Question
         fields = '__all__'
-       
 
     def get_is_attempted(self, obj):
         request = self.context.get('request', None)
@@ -50,14 +49,12 @@ class QuestionSerializer(serializers.ModelSerializer):
         
         user = request.user
         child_id = request.query_params.get('child_id')
-
         if user.is_student:
             return Answer.objects.filter(user=user, question=obj).exists()
         elif user.is_parent:
             child = get_object_or_404(Child, parent=user.parent, pk=child_id)
             return Answer.objects.filter(child=child, question=obj).exists()
-        else:
-            return False
+        return False
 
     def get_is_correct(self, obj):
         request = self.context.get('request', None)
@@ -67,12 +64,7 @@ class QuestionSerializer(serializers.ModelSerializer):
         user = request.user
         child_id = request.query_params.get('child_id')
         if user.is_student:
-            if Answer.objects.filter(user=user, question=obj, is_correct=True).exists():
-                return True
-            elif Answer.objects.filter(user=user, question=obj, is_correct=False).exists():
-                return False
-            else:
-                return None
+            return Answer.objects.filter(user=user, question=obj, is_correct=True).exists()
         elif user.is_parent and child_id:
             child = get_object_or_404(Child, parent=user.parent, pk=child_id)
             return Answer.objects.filter(child=child, question=obj, is_correct=True).exists()
@@ -82,76 +74,52 @@ class QuestionSerializer(serializers.ModelSerializer):
         question = Question.objects.create(**validated_data)
 
         if question.question_type in ['multiple_choice_images', 'drag_and_drop_images']:
-            images_data = self.context.get('request').FILES
-            options = []
-            for key in images_data:
-                if 'image_' in key:
-                    option_id = key.split('_')[1]  # Expecting the key to be formatted as 'image_OPTIONID'
-                    image_file = images_data[key]
+            self._handle_images(question)
+        
+        return question
+
+    def update(self, instance, validated_data):
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+
+        if instance.question_type in ['multiple_choice_images', 'drag_and_drop_images']:
+            self._handle_images(instance)
+        else:
+            instance.images.all().delete()
+        
+        instance.save()
+        return instance
+    
+    def _handle_images(self, question):
+        images_data = self.context.get('request').FILES
+        options = []
+
+        for key in images_data:
+            if 'image_' in key:
+                option_id = key.split('_')[1]  # Expecting the key to be formatted as 'image_OPTIONID'
+                image_file = images_data[key]
+
+                image = question.images.filter(option_id=option_id).first()
+                if image:
+                    image.image = image_file
+                    image.save()
+                else:
                     image = Image.objects.create(
                         question=question,
                         image=image_file,
                         option_id=option_id
                     )
-                    options.append({'id': option_id, 'value': image.image.url})
-            question.options = options
-            question.save()
 
-        return question
-    
+                options.append({'id': option_id, 'value': image.image.url})
 
-    def update(self, instance, validated_data):
-        instance.title = validated_data.get('title', instance.title)
-        instance.question_text = validated_data.get('question_text', instance.question_text)
-        instance.question_type = validated_data.get('question_type', instance.question_type)
-        instance.correct_answer = validated_data.get('correct_answer', instance.correct_answer)
-        instance.template = validated_data.get('template', instance.template)
+        question.options = options
+        question.save()
 
-        if 'audio' in validated_data:
-            instance.audio = validated_data['audio']
-
-        if instance.question_type in ['multiple_choice_images', 'drag_and_drop_images']:
-            images_data = self.context.get('request').FILES
-            options = []
-            # instance.images.all().delete()  # Delete existing images
-
-            for key in images_data:
-                if 'image_' in key:
-                    option_id = key.split('_')[1]  # Expecting the key to be formatted as 'image_OPTIONID'
-                    image_file = images_data[key]
-
-                    # Check if image with the option_id already exists
-                    image = instance.images.filter(option_id=option_id).first()
-                    if image:
-                        image.image = image_file
-                        image.save()
-                    else:
-                        image = Image.objects.create(
-                            question=instance,
-                            image=image_file,
-                            option_id=option_id
-                        )
-
-                    options.append({'id': option_id, 'image': image.image.url})
-
-            instance.options = options
-        else:
-            instance.images.all().delete()
-            instance.options = validated_data.get('options', instance.options)
-
-        instance.save()
-        return instance
-    
     def to_representation(self, instance):
         representation = super().to_representation(instance)
         if instance.question_type in ['multiple_choice_images', 'drag_and_drop_images']:
             representation['options'] = representation.pop('images', [])
         return representation
-    
-    
-    
-
-
 
 class TaskSerializer(serializers.ModelSerializer):
     questions = QuestionSerializer(many=True, read_only=True)
@@ -175,12 +143,11 @@ class TaskSerializer(serializers.ModelSerializer):
         child_id = request.query_params.get('child_id')
 
         if user.is_student:
-            return TaskCompletion.objects.filter(user=user, task=obj).exists()
+            return TaskCompletion.objects.filter(user=user, task=obj).first()
         elif user.is_parent and child_id:
             child = get_object_or_404(Child, parent=user.parent, pk=child_id)
-            return TaskCompletion.objects.filter(child=child, task=obj).exists()
-        else:
-            return None
+            return TaskCompletion.objects.filter(child=child, task=obj).first()
+        return None
 
     def get_answered_questions(self, obj):
         task_completion = self.get_task_completion(obj)
@@ -206,67 +173,12 @@ class TaskSerializer(serializers.ModelSerializer):
         return task_completion.correct if task_completion else 0
 
     def get_is_completed(self, obj):
-        task_completion = self.get_task_completion(obj)
-        return task_completion is not None
+        return bool(self.get_task_completion(obj))
 
-class TaskSummarySerializer(serializers.ModelSerializer):
-    questions = QuestionSerializer(many=True, read_only=True)
-    is_completed = serializers.SerializerMethodField()
-    total_questions = serializers.SerializerMethodField()
-    correct_questions = serializers.SerializerMethodField()
-    incorrect_questions = serializers.SerializerMethodField()
-    answered_questions = serializers.SerializerMethodField()
-    progress = serializers.SerializerMethodField()
-
+class TaskSummarySerializer(TaskSerializer):
     class Meta:
         model = Task
         fields = ['id', 'title', 'description', 'section', 'questions', 'order', 'progress', 'answered_questions', 'is_completed', 'total_questions', 'correct_questions', 'incorrect_questions']
-
-    def get_task_completion(self, obj):
-        request = self.context.get('request', None)
-        if not request:
-            return None
-
-        user = request.user
-        child_id = request.query_params.get('child_id')
-
-        if user.is_student:
-            return TaskCompletion.objects.filter(user=user, task=obj).first()
-        elif user.is_parent and child_id:
-            child = get_object_or_404(Child, parent=user.parent, pk=child_id)
-            return TaskCompletion.objects.filter(child=child, task=obj).first()
-        else:
-            return None
-
-    def get_answered_questions(self, obj):
-        task_completion = self.get_task_completion(obj)
-        if task_completion:
-            return task_completion.correct + task_completion.wrong
-        return 0
-
-    def get_progress(self, obj):
-        answered_questions = self.get_answered_questions(obj)
-        total_questions = self.get_total_questions(obj)
-        if total_questions == 0:
-            return 0
-        return (answered_questions / total_questions) * 100
-
-    def get_incorrect_questions(self, obj):
-        task_completion = self.get_task_completion(obj)
-        return task_completion.wrong if task_completion else 0
-
-    def get_total_questions(self, obj):
-        return obj.questions.count()
-
-    def get_correct_questions(self, obj):
-        task_completion = self.get_task_completion(obj)
-        return task_completion.correct if task_completion else 0
-
-    def get_is_completed(self, obj):
-        task_completion = self.get_task_completion(obj)
-        return task_completion is not None
-    
-
 
 class ContentSerializer(serializers.ModelSerializer):
     is_completed = serializers.SerializerMethodField()
@@ -289,9 +201,6 @@ class ContentSerializer(serializers.ModelSerializer):
             elif user.is_parent and child_id:
                 child = get_object_or_404(Child, parent=user.parent, pk=child_id)
                 return TaskCompletion.objects.filter(child=child, task=obj).exists()
-            else:
-                return None
-        
         return None
 
     def to_representation(self, instance):

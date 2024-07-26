@@ -1,18 +1,21 @@
-import json
+from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from django.shortcuts import get_object_or_404
 from rest_framework.decorators import action
 from account.permissions import IsSuperUserOrStaffOrReadOnly, HasSubscription
 from account.models import Student, Child
-from .models import Answer, Course, Image, Section, Lesson, Content, Task, Question, TaskCompletion
-from .serializers import CourseSerializer, SectionSerializer, LessonSerializer, ContentSerializer, TaskSerializer, QuestionSerializer, TaskSummarySerializer
+from .models import (
+    Answer, Course, Image, Section, Lesson, Content,
+    Task, Question, TaskCompletion
+)
+from .serializers import (
+    CourseSerializer, SectionSerializer, LessonSerializer,
+    ContentSerializer, TaskSerializer, QuestionSerializer,
+    TaskSummarySerializer
+)
 from rest_framework.views import APIView
 from django.utils import timezone
-
-
-
 
 class CourseViewSet(viewsets.ModelViewSet):
     queryset = Course.objects.all()
@@ -41,7 +44,7 @@ class CourseViewSet(viewsets.ModelViewSet):
         data['created_by'] = user.id
         serializer = self.serializer_class(data=data, context={'request': request})
         if serializer.is_valid():
-            course = serializer.save()
+            serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -76,7 +79,6 @@ class SectionViewSet(viewsets.ModelViewSet):
         if serializer.is_valid():
             sections = serializer.save()
             return Response(self.serializer_class(sections, many=isinstance(data, list)).data, status=status.HTTP_201_CREATED)
-        print(serializer.errors)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def get_serializer_context(self):
@@ -92,13 +94,12 @@ class ContentViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return Content.objects.filter(section_id=self.kwargs['section_pk']).order_by('order')
     
-
     def create(self, request, course_pk=None, section_pk=None):
         data = request.data.copy()
         data['section'] = section_pk
         serializer = self.serializer_class(data=data, context={'request': request})
         if serializer.is_valid():
-            content = serializer.save()
+            serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
@@ -177,7 +178,7 @@ class TaskViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(data=data, many=isinstance(data, list), context={'request': request})
         if serializer.is_valid():
-            tasks = serializer.save()
+            serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
@@ -216,27 +217,20 @@ class QuestionViewSet(viewsets.ModelViewSet):
         serializer = self.serializer_class(data=data, many=isinstance(data, list), context={'request': request})
         if serializer.is_valid():
             questions = serializer.save()
+            TaskCompletion.objects.filter(task_id=self.kwargs['task_pk']).all().delete()
             return Response(self.serializer_class(questions, many=isinstance(data, list)).data, status=status.HTTP_201_CREATED)
-        print(serializer.errors)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
     def partial_update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', True)
         instance = self.get_object()
         data = request.data.copy()
-
-        print(data)
-
-
         data['task'] = self.kwargs['task_pk']
         serializer = self.serializer_class(instance, data=data, partial=partial, context={'request': request})
         if serializer.is_valid():
             question = serializer.save()
             return Response(self.serializer_class(question).data, status=status.HTTP_200_OK)
-        print(serializer.errors)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-    
 
     @action(detail=True, methods=['post'], url_path='answer', permission_classes=[IsAuthenticated])
     def answer(self, request, *args, **kwargs):
@@ -245,7 +239,9 @@ class QuestionViewSet(viewsets.ModelViewSet):
         child_id = request.data.get('child_id')
         answer_text = request.data.get('answer')
 
-        # Fetch the correct answer status
+        if not answer_text:
+            return Response({"message": "Answer is required"}, status=status.HTTP_400_BAD_REQUEST)
+
         is_correct = self.validate_answer(question, answer_text)
 
         if user.is_student:
@@ -269,17 +265,15 @@ class QuestionViewSet(viewsets.ModelViewSet):
 
     def handle_answer(self, user=None, child=None, question=None, answer_text=None, is_correct=False):
         entity = user.student if user else child
-        print(entity)
+
         is_answer_exists = Answer.objects.filter(
             user=user, child=child,
             question=question
         ).exists()
 
-
-
         if is_answer_exists:
             return {
-                "message": "Answer proccessed, but no reward is given",
+                "message": "Answer processed, but no reward is given",
                 "is_correct": is_correct
             }
 
@@ -309,22 +303,23 @@ class QuestionViewSet(viewsets.ModelViewSet):
             is_correct=True
         ).count()
 
-        wrong_answers = Answer.objects.filter(
-            user=user, child=child,
-            question__task=task,
-            is_correct=False
-        ).count()
-
+        wrong_answers = answered_questions - correct_answers
 
         if answered_questions == total_questions:
-            TaskCompletion.objects.get_or_create(
+            task_completion, created = TaskCompletion.objects.get_or_create(
                 user=user if user else None,
                 child=child if child else None,
-                task=task,
-                correct=correct_answers,
-                wrong=wrong_answers
+                task=task
             )
-            print("Task completed")
+            if task_completion.correct == correct_answers and task_completion.wrong == wrong_answers:
+                return {
+                    "message": "Answer processed, but no reward is given",
+                    "is_correct": is_correct
+                }
+            task_completion.correct = correct_answers
+            task_completion.wrong = wrong_answers
+            task_completion.save()
+        
             entity.update_streak()
 
         return {
@@ -332,34 +327,25 @@ class QuestionViewSet(viewsets.ModelViewSet):
             "is_correct": is_correct
         }
 
-
-
-
 class PlayGameView(APIView):
     permission_classes = [HasSubscription, IsAuthenticated]
 
     def get(self, request):
         user = request.user
         child_id = request.query_params.get('child_id', None)
-
-        print(child_id)
-
         game_cost = 20
 
         if user.is_student:
-            student = get_object_or_404(Student, user=user)
-            if student.stars < game_cost:
-                return Response({"message": "Not enough stars", "is_enough": False }, status=status.HTTP_200_OK)
-            student.stars -= game_cost
-            student.save()
-            return Response({"message": f"{game_cost} stars have been deducted", "is_enough": True}, status=status.HTTP_200_OK)
-        
+            return self.deduct_stars(user.student, game_cost)
         elif user.is_parent and child_id:
             child = get_object_or_404(Child, parent=user.parent, pk=child_id)
-            if child.stars < game_cost:
-                return Response({"message": "Not enough stars", "is_enough": False}, status=status.HTTP_200_OK)
-            child.stars -= game_cost
-            child.save()
-            return Response({"message": f"{game_cost} stars have been deducted from the child", "is_enough": True}, status=status.HTTP_200_OK)
+            return self.deduct_stars(child, game_cost)
         
         return Response({"message": "Invalid request. Parent must provide child_id."}, status=status.HTTP_400_BAD_REQUEST)
+
+    def deduct_stars(self, entity, cost):
+        if entity.stars < cost:
+            return Response({"message": "Not enough stars", "is_enough": False}, status=status.HTTP_200_OK)
+        entity.stars -= cost
+        entity.save()
+        return Response({"message": f"{cost} stars have been deducted", "is_enough": True}, status=status.HTTP_200_OK)

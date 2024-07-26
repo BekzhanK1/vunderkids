@@ -1,41 +1,75 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
+
 <head>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
+
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Montserrat', Arial, Helvetica, sans-serif;
+            color-scheme: light dark;
+            color: #333;
             line-height: 1.6;
             background-color: #f4f4f4;
             margin: 0;
             padding: 0;
         }
+
         .email-container {
             background-color: #ffffff;
-            max-width: 600px;
+            max-width: 800px;
             margin: 20px auto;
             padding: 20px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
+
         a {
-            background-color: #4CAF50;
+            background-color: #00639E;
             color: white;
             padding: 10px 20px;
             text-decoration: none;
             border-radius: 5px;
         }
+
         p {
             color: #333;
         }
+
+        .password {
+            display: none;
+            color: #333;
+        }
+
+        .reveal-password:hover .password {
+            display: inline;
+        }
+
+        .reveal-password:hover .masked-password {
+            display: none;
+        }
+
+        .masked-password {
+            display: inline;
+            color: #00639E;
+            cursor: pointer;
+            text-decoration: underline;
+        }
     </style>
 </head>
+
 <body>
     <div class="email-container">
-        <p>Hello {{ user.first_name }},</p>
-        <p>Thank you for registering with Vunderkids. Please click the link below to activate your account:</p>
+        <img src="https://i.postimg.cc/7Yk7ZJgr/logo-blue.png" alt="logo" style="width: 200px; height: 55px;">
+        <h1>Здравстуйте {{ user.first_name }}!</h1>
+        <!-- <p>Thank you for registering with Vunderkids. Please click the link below to activate your account:</p> -->
+        <p>Спасибо, что зарегистрировались на сайте Vunderkids. Пожалуйста нажмите на ссылку ниже чтобы активировать ваш
+            аккаунт:</p>
         <p style="text-align: center; margin: 20px 0;">
-            <a href="{{ activation_url }}">Activate your account</a>
+            <a href="{{ activation_url }}">Активировать аккаунт</a>
         </p>
-        <p>Your password: <strong>{{ password }}</strong></p>
+        <p>Ваш пароль: <span class="reveal-password"><span class="masked-password">[показать]</span><span
+                    class="password">{{ password }}</span></span></p>
     </div>
 </body>
+
 </html>

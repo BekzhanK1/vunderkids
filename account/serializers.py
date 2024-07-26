@@ -4,15 +4,14 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.contrib.auth import get_user_model
-from django.core.exceptions import ObjectDoesNotExist
-from account.models import *
+from account.models import Parent, Child, Student, School, Class
 from subscription.models import Subscription, Plan
+from django.core.exceptions import ObjectDoesNotExist
 from .tasks import send_activation_email
-from .utils import generate_password, get_presigned_url
-
-
+from .utils import generate_password
 
 User = get_user_model()
+
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
@@ -34,17 +33,11 @@ class StaffRegistrationSerializer(serializers.ModelSerializer):
         )
         password = generate_password()
         user.set_password(password)
-        send_activation_email.delay(user.id, password)
         user.save()
+        send_activation_email.delay(user.id, password)
         return user
-    
 
 class SupervisorRegistrationSerializer(serializers.ModelSerializer):
-    email = serializers.EmailField()
-    first_name = serializers.CharField()
-    last_name = serializers.CharField()
-    phone_number = serializers.CharField()
-
     class Meta:
         model = User
         fields = ['email', 'first_name', 'last_name', 'phone_number']
@@ -66,30 +59,20 @@ class SupervisorRegistrationSerializer(serializers.ModelSerializer):
             phone_number=validated_data.get('phone_number', ''),
             first_name=validated_data['first_name'],
             last_name=validated_data['last_name'],
-            role='supervisor',
-            password = password,
-            is_staff=False
+            role='supervisor'
         )
         user.set_password(password)
         user.save()
         send_activation_email.delay(user.id, password)
-
         return user
 
-        
-
-        
 class ParentRegistrationSerializer(serializers.ModelSerializer):
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True)
-    first_name = serializers.CharField()
-    last_name = serializers.CharField()
-    phone_number = serializers.CharField()
 
     class Meta:
         model = Parent
         fields = ['email', 'password', 'first_name', 'last_name', 'phone_number']
-
 
     def validate_email(self, value):
         try:
@@ -102,7 +85,6 @@ class ParentRegistrationSerializer(serializers.ModelSerializer):
         return value
 
     def create(self, validated_data):
-        # Create user
         user_data = {
             'email': validated_data.pop('email'),
             'first_name': validated_data.pop('first_name'),
@@ -117,39 +99,28 @@ class ParentRegistrationSerializer(serializers.ModelSerializer):
         user.save()
         send_activation_email.delay(user.id, password)
 
-        # Create parent profile
         parent = Parent.objects.create(user=user, **validated_data)
         return parent
 
-        
 class ParentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Parent
         fields = '__all__'
-    
+
 class SchoolSerializer(serializers.ModelSerializer):
     student_number = serializers.SerializerMethodField(read_only=True)
     supervisor = UserSerializer(read_only=True)
+    
     class Meta:
         model = School
         fields = '__all__'
     
     def get_student_number(self, obj):
         return Student.objects.filter(school=obj).count()
-        
-        
-
-
 
 class StudentRegistrationSerializer(serializers.ModelSerializer):
-    email = serializers.EmailField(max_length=255)
-    first_name = serializers.CharField(max_length=30)
-    last_name = serializers.CharField(max_length=150)
-    phone_number = serializers.CharField(max_length=17, required=False, allow_blank=True)
     school = serializers.PrimaryKeyRelatedField(queryset=School.objects.all(), write_only=True)
-    grade = serializers.IntegerField()
     school_class = serializers.PrimaryKeyRelatedField(queryset=Class.objects.all(), write_only=True)
-    gender = serializers.CharField()
     
     class Meta:
         model = Student
@@ -170,7 +141,7 @@ class StudentRegistrationSerializer(serializers.ModelSerializer):
         school_class = validated_data.pop('school_class')
         grade = validated_data.pop('grade')
         gender = validated_data.pop('gender')
-        # Create user
+        
         user_data = {
             key: validated_data.pop(key) for key in ['email', 'first_name', 'last_name', 'phone_number']
         }
@@ -180,21 +151,20 @@ class StudentRegistrationSerializer(serializers.ModelSerializer):
         user.save()
         send_activation_email.delay(user.id, password)
 
-        # Create student associated with this user
-        student = Student.objects.create(user=user, school = school, school_class = school_class, grade = grade, gender=gender, **validated_data)
+        student = Student.objects.create(user=user, school=school, school_class=school_class, grade=grade, gender=gender, **validated_data)
         return student
-    
+
 class StudentSerializer(serializers.ModelSerializer):
     user = UserSerializer()
     school_name = serializers.SerializerMethodField()
+    
     class Meta:
         model = Student
         fields = '__all__'
 
     def get_school_name(self, obj):
         return obj.school.name if obj.school else None
-    
-    
+
 class StudentsListSerializer(serializers.ModelSerializer):
     school_name = serializers.SerializerMethodField()
     first_name = serializers.CharField(source='user.first_name')
@@ -202,19 +172,17 @@ class StudentsListSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(source='user.email')
     id = serializers.IntegerField(source='user.id')
 
-
-    def get_school_name(self, obj):
-        return obj.school.name if obj.school else None
-
     class Meta:
         model = Student
         fields = ['id', 'first_name', 'last_name', 'email', 'grade', 'school_name', 'gender']
+
+    def get_school_name(self, obj):
+        return obj.school.name if obj.school else None
 
 class ChildrenListSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(source='parent.user.email')
     school_name = serializers.SerializerMethodField()
     parent_id = serializers.IntegerField(source='parent.user.id')
-
 
     class Meta:
         model = Child
@@ -222,54 +190,53 @@ class ChildrenListSerializer(serializers.ModelSerializer):
 
     def get_school_name(self, obj):
         return "Индивидуальный аккаунт"
+
 class SimpleStudentSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(source='user.first_name')
     last_name = serializers.CharField(source='user.last_name')
     email = serializers.EmailField(source='user.email')
+    
     class Meta:
         model = Student
         fields = ['id', 'first_name', 'last_name', 'email', 'grade', 'level', 'streak', 'cups', 'stars', 'gender', 'avatar', 'birth_date', 'last_task_completed_at', 'school_class', 'school']
 
-
 class ClassSerializer(serializers.ModelSerializer):
     class Meta:
         model = Class
-        fields = '__all__'     
-        
+        fields = '__all__'
+
 class ChildSerializer(serializers.ModelSerializer):
     email = serializers.SerializerMethodField()
     tasks_completed = serializers.SerializerMethodField()
     has_subscription = serializers.SerializerMethodField()
     is_free_trial = serializers.SerializerMethodField()
 
-
     class Meta:
-        model = Child       
+        model = Child
         fields = '__all__'
+
+    def get_email(self, obj):
+        return obj.parent.user.email
+    
+    def get_tasks_completed(self, obj):
+        return obj.completed_tasks.count()
+
+    def get_has_subscription(self, obj):
+        subscription_active, _ = self.check_subscription_and_free_trial(obj)
+        return subscription_active
+    
+    def get_is_free_trial(self, obj):
+        _, is_free_trial = self.check_subscription_and_free_trial(obj)
+        return is_free_trial
 
     def check_subscription_and_free_trial(self, obj):
         parent = obj.parent
         has_subscription = hasattr(parent.user, 'subscription')
         active_subscription = parent.user.subscription if has_subscription else None
-        is_free_trial = False
-        if active_subscription:
-            subscription_active = active_subscription.is_active
-            is_free_trial = active_subscription.plan.duration == 'free-trial'
+        subscription_active = active_subscription.is_active if active_subscription else False
+        is_free_trial = active_subscription.plan.duration == 'free-trial' if active_subscription else False
         return subscription_active, is_free_trial
-    
-    def get_has_subscription(self, obj):
-        subscription_active, is_free_trial = self.check_subscription_and_free_trial(obj)
-        return subscription_active
-    
-    def get_is_free_trial(self, obj):
-        subscription_active, is_free_trial = self.check_subscription_and_free_trial(obj)
-        return is_free_trial
-    
-    def get_tasks_completed(self, obj):
-        return obj.completed_tasks.count()
-    def get_email(self, obj):
-        return obj.parent.user.email
-        
+
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user):
@@ -283,7 +250,6 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         try:
             if self.user.is_student:
                 student = Student.objects.get(user=self.user)
-                grade = student.grade
                 avatar_url = student.avatar.url if student.avatar else None
                 data['user'] = {
                     'id': self.user.id,
@@ -291,7 +257,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
                     'first_name': self.user.first_name,
                     'last_name': self.user.last_name,
                     'role': self.user.role,
-                    'grade': grade,
+                    'grade': student.grade,
                     'gender': student.gender,
                     'language': student.language,
                     'avatar': avatar_url,
@@ -335,7 +301,8 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
                     'is_superuser': self.user.is_superuser,
                     'is_staff': self.user.is_staff
                 }
-        except ObjectDoesNotExist as e:
-            raise serializers.ValidationError("User data could not be retrieved.")  # Customize error message as needed
+        
+        except ObjectDoesNotExist:
+            raise serializers.ValidationError("User data could not be retrieved.")
 
         return data

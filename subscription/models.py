@@ -3,7 +3,6 @@ from datetime import timedelta
 from django.utils import timezone
 from account.models import User
 
-
 DURATION_CHOICES = [
     ('free-trial', 'Free Trial'),
     ('monthly', 'Monthly'),
@@ -38,25 +37,34 @@ class Subscription(models.Model):
             self.start_date = timezone.now()
 
         if not self.end_date:
-            if self.plan.duration == 'monthly':
-                self.end_date = self.start_date + timedelta(days=30)
-            elif self.plan.duration == '6-month':
-                self.end_date = self.start_date + timedelta(days=180)
-            elif self.plan.duration == 'annual':
-                self.end_date = self.start_date + timedelta(days=365)
+            self.end_date = self.calculate_end_date()
         super().save(*args, **kwargs)
+
+    def calculate_end_date(self):
+        if self.plan.duration == 'monthly':
+            return self.start_date + timedelta(days=30)
+        elif self.plan.duration == '6-month':
+            return self.start_date + timedelta(days=180)
+        elif self.plan.duration == 'annual':
+            return self.start_date + timedelta(days=365)
+        return None
 
     @property
     def is_active(self):
         if self.plan.duration == "free-trial":
-            if self.user.is_parent:
-                if self.user.parent.children.count() == 0:
-                    return True
-                for child in self.user.parent.children.all():
-                    if child.completed_tasks.count() > 9:  # 10 is the maximum number of tasks to complete
-                        return False
-                return True
+            return self.is_free_trial_active()
         return self.end_date is not None and timezone.now() < self.end_date
+
+    def is_free_trial_active(self):
+        if not self.user.is_parent:
+            return False
+        children = self.user.parent.children.all()
+        if not children.exists():
+            return True
+        for child in children:
+            if child.completed_tasks.count() > 9:
+                return False
+        return True
 
     def __str__(self):
         return f"{self.user.email} - {self.plan.duration} Plan (Expires: {self.end_date})"

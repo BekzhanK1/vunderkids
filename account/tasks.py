@@ -3,11 +3,13 @@ from django.core.mail import EmailMultiAlternatives, get_connection
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from django.conf import settings
+from django.utils import timezone
 from account.models import Child, Student, Parent, User
 from subscription.models import Subscription
 from account.utils import generate_password, render_email
 from django.utils import timezone
 from datetime import timedelta, time
+import uuid
 
 frontend_url = settings.FRONTEND_URL
 
@@ -46,6 +48,8 @@ def send_daily_email_to_all_parents():
     datatuple = []
     for parent in parents:
         if parent.user.is_active:
+            if parent.children.all().count() == 0:
+                return
             context = {
                 'first_name': parent.user.first_name,
                 'last_name': parent.user.last_name,
@@ -73,6 +77,8 @@ def send_mass_activation_email(user_ids):
     for user in users:
         password = generate_password()
         user.set_password(password)
+        user.activation_token = uuid.uuid4()
+        user.activation_token_expires_at = timezone.now() + timedelta(days=1)
         user.save()
         activation_url = f"{frontend_url}activate/{user.activation_token}/"
         context = {'user': user, 'activation_url': activation_url, 'password': password}
@@ -94,6 +100,9 @@ def send_mass_activation_email(user_ids):
 @shared_task
 def send_activation_email(user_id, password):
     user = User.objects.get(pk=user_id)
+    user.activation_token = uuid.uuid4()
+    user.activation_token_expires_at = timezone.now() + timedelta(days=1)
+    user.save()
     activation_url = f"{frontend_url}activate/{user.activation_token}/"
     context = {'user': user, 'activation_url': activation_url, 'password': password}
     subject = 'Activate your Vunderkids Account'
@@ -124,29 +133,43 @@ def send_password_reset_request_email(user_id):
 
 
 
+def is_losing_streak(last_date):
+    now = timezone.now()
+    today = now.date()
+
+    if last_date != today:
+        return True
+    return False
+
 @shared_task
 def check_streaks():
     now = timezone.now()
-    current_time = now.time()
-    
-    # Check if the current time is past 23:50
-    if current_time < time(23, 50):
-        return  # Exit the task if the current time is before 23:50
-    
     today = now.date()
-    students = Student.objects.all().select_related('user')
+
+    students = Student.objects.all()
     for student in students:
         if student.last_task_completed_at:
             last_date = student.last_task_completed_at.date()
-            if today > last_date and today != (last_date + timedelta(days=1)):
+            if is_losing_streak(last_date):
                 student.streak = 0
                 student.save()
+            else:
+                return
+        else:
+            student.streak = 0
+            student.save()
     
-    children = Child.objects.all().select_related('user')
-    for child in children:
-        if child.last_task_completed_at:
-            last_date = child.last_task_completed_at.date()
-            if today > last_date and today != (last_date + timedelta(days=1)):
+    parents = Parent.objects.all()
+    for parent in parents:
+        for child in parent.children.all():
+            if child.last_task_completed_at:
+                last_date = child.last_task_completed_at.date()
+                if is_losing_streak(last_date):
+                    child.streak = 0
+                    child.save()
+                else:
+                    return
+            else:
                 child.streak = 0
                 child.save()
 
@@ -181,3 +204,8 @@ def delete_expired_subscriptions():
         subscription.delete()
 
     return f"Deleted {count} expired subscriptions"
+
+@shared_task
+def example_task():
+    for i in range(1000):
+        print("HELLO")

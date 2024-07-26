@@ -24,3 +24,4 @@ django-storages==1.14.3
 dj-database-url
 pandas
 openpyxl
+google-cloud-storage

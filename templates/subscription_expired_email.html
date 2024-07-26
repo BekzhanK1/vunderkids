@@ -1,13 +1,16 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Subscription Expired</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
+
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Montserrat', Arial, Helvetica, sans-serif;
+            color-scheme: light dark;
             background-color: #f4f4f4;
             margin: 0;
             padding: 0;
@@ -23,14 +26,17 @@
         }
 
         .header {
-            background-color: #4CAF50;
+            background-color: #00639E;
             color: #ffffff;
-            text-align: center;
             padding: 20px;
+            display: flex;
+            flex-direction: column;
         }
 
         .header h1 {
-            margin: 0;
+            margin-top: 20px;
+            text-align: center;
+
         }
 
         .content {
@@ -50,7 +56,7 @@
             display: inline-block;
             margin-top: 20px;
             padding: 10px 20px;
-            background-color: #4CAF50;
+            background-color: #00639E;
             color: #ffffff;
             text-decoration: none;
             border-radius: 5px;
@@ -69,20 +75,27 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>Subscription Expired</h1>
+            <img src="https://i.postimg.cc/0QT3h0M4/logo-white.png" alt="logo" width="200px" height="55px">
+            <h1>Ваш тариф подошел к концу</h1>
         </div>
         <div class="content">
-            <h2>Dear {{ user.first_name }},</h2>
-            <p>We hope this message finds you well. We wanted to inform you that your subscription has expired. As a
-                result, you no longer have access to premium features and content.</p>
-            <p>We highly value you as a customer and would love to have you back. Renew your subscription to continue
-                enjoying our premium services and stay connected with tahe latest updates and exclusive content.</p>
-            <a href="https://vunderkids.kz">Renew Your Subscription</a>
+            <h2>Уважаемый(ая) {{ user.first_name }},</h2>
+            <!-- <p>We hope this message finds you well. We wanted to inform you that your subscription has expired. As a
+                result, you no longer have access to premium features and content.</p> -->
+            <p>Мы надеемся, что вы в порядке. Мы хотим сообщить вам, что ваш тариф истек. Теперь, доступ к
+                премиум-функциям и контенту ограничен.</p>
+            <!-- <p>We highly value you as a customer and would love to have you back. Renew your subscription to continue
+                enjoying our premium services and stay connected with tahe latest updates and exclusive content.</p> -->
+            <p>Мы вас очень ценим как клиента, и хотели бы, чтобы вы оставались с нами! Обновите ваш тариф для того
+                чтобы дальше пользоваться премиум-функциями и быть в курсе о самых новых и эксклюзивных контентах.</p>
+            <p style="text-align: center;">
+                <a href="https://vunderkids.kz">Обновить Тариф</a>
+            </p>
         </div>
         <div class="footer">
-            <p>If you have any questions or need assistance, please feel free to <a
-                    href="mailto:bkimadieff@gmail.com">contact our support team</a>.</p>
-            <p>Thank you for being a valued member of our community!</p>
+            <p>Если у вас возникли какие нибудь вопросы, можете написать <a href="mailto:bkimadieff@gmail.com">на нашу
+                    техническю поддержку</a>.</p>
+            <p>Спасибо за ваш ценный вклад в наше сообщество!</p>
         </div>
     </div>
 </body>
