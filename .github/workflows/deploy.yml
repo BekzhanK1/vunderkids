@@ -2,8 +2,8 @@ name: Deploy Backend
 
 on:
   push:
-    branches: ["prod"]
-
+    branches:
+      - prod
 jobs:
   deploy:
     runs-on: ubuntu-latest

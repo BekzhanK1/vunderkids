@@ -114,6 +114,7 @@ class StaffRegistrationAPIView(APIView):
 class ParentRegistrationAPIView(APIView):
     def post(self, request):
         data = request.data
+        print(data)
         serializer = ParentRegistrationSerializer(data=data)
         if serializer.is_valid():
             parent = serializer.save()
@@ -121,6 +122,7 @@ class ParentRegistrationAPIView(APIView):
                 "message": f"Activation email sent to {data['email']}",
                 "parent_id": parent.pk
             }, status=status.HTTP_201_CREATED)
+        print(serializer.errors)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class SchoolViewSet(viewsets.ModelViewSet):
