@@ -81,3 +81,6 @@ class TaskCompletionAdmin(admin.ModelAdmin):
     search_fields = ("user__email", "child__first_name", "task__title")
     list_filter = ("task__chapter__section__course__name", "completed_at")
     raw_id_fields = ("user", "child", "task")
+
+
+admin.site.register(Chapter)

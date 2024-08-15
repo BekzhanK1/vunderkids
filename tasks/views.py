@@ -139,13 +139,13 @@ class ContentViewSet(viewsets.ModelViewSet):
     permission_classes = [IsSuperUserOrStaffOrReadOnly]
 
     def get_queryset(self):
-        return Content.objects.filter(section_id=self.kwargs["section_pk"]).order_by(
+        return Content.objects.filter(chapter_id=self.kwargs["chapter_pk"]).order_by(
             "order"
         )
 
-    def create(self, request, course_pk=None, section_pk=None):
+    def create(self, request, course_pk=None, section_pk=None, chapter_pk=None):
         data = request.data.copy()
-        data["section"] = section_pk
+        data["chapter"] = chapter_pk
         serializer = self.serializer_class(data=data, context={"request": request})
         if serializer.is_valid():
             serializer.save()
@@ -157,7 +157,9 @@ class ContentViewSet(viewsets.ModelViewSet):
         methods=["patch"],
         permission_classes=[IsSuperUserOrStaffOrReadOnly],
     )
-    def update_contents(self, request, course_pk=None, section_pk=None):
+    def update_contents(
+        self, request, course_pk=None, section_pk=None, chapter_pk=None
+    ):
         contents_data = request.data.get("contents")
         if not contents_data:
             return Response(
@@ -192,14 +194,14 @@ class LessonViewSet(viewsets.ModelViewSet):
             "order"
         )
 
-    def create(self, request, course_pk=None, section_pk=None):
+    def create(self, request, course_pk=None, section_pk=None, chapter_pk=None):
         data = request.data.copy()
         if isinstance(data, list):
             for item in data:
-                item["section"] = section_pk
+                item["chapter"] = chapter_pk
                 item["content_type"] = "lesson"
         else:
-            data["section"] = section_pk
+            data["chapter"] = chapter_pk
             data["content_type"] = "lesson"
 
         serializer = self.serializer_class(
@@ -234,14 +236,14 @@ class TaskViewSet(viewsets.ModelViewSet):
             return TaskSummarySerializer
         return TaskSerializer
 
-    def create(self, request, course_pk=None, section_pk=None):
+    def create(self, request, chapter_pk=None, section_pk=None, course_pk=None):
         data = request.data.copy()
         if isinstance(data, list):
             for item in data:
-                item["section"] = section_pk
+                item["chapter"] = chapter_pk
                 item["content_type"] = "task"
         else:
-            data["section"] = section_pk
+            data["chapter"] = chapter_pk
             data["content_type"] = "task"
 
         serializer = self.get_serializer(

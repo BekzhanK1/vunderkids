@@ -1,0 +1,56 @@
+version: "3.8"
+
+services:
+  redis:
+    image: redis:6
+    networks:
+      - vunderkids_net
+
+  web:
+    build: .
+    command:
+      [
+        "gunicorn",
+        "vunderkids.wsgi",
+        "--bind",
+        "0.0.0.0:8000",
+        "--workers",
+        "4",
+      ]
+    volumes:
+      - .:/django
+    ports:
+      - "8000:8000"
+    environment:
+      CELERY_BROKER_URL: redis://redis:6379/0
+    networks:
+      - vunderkids_net
+
+  celery_worker:
+    build: .
+    command: celery -A vunderkids worker --loglevel=info
+    volumes:
+      - .:/django
+    environment:
+      CELERY_BROKER_URL: redis://redis:6379/0
+    depends_on:
+      - web
+      - redis
+    networks:
+      - vunderkids_net
+
+  celery_beat:
+    build: .
+    command: celery -A vunderkids beat --loglevel=info
+    volumes:
+      - .:/django
+    environment:
+      CELERY_BROKER_URL: redis://redis:6379/0
+    depends_on:
+      - web
+      - redis
+    networks:
+      - vunderkids_net
+
+networks:
+  vunderkids_net:
