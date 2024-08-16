@@ -13,7 +13,7 @@ secrets/
 celerybeat-schedule
 
 # Ignore database file
-db.sqlite3
+*.sqlite3
 
 # Ignore node_modules directory
 node_modules/
