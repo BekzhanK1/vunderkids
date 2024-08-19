@@ -1,27 +1,32 @@
 from datetime import date, timedelta
 from django.utils import timezone
 from django.db import models
-from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from django.contrib.auth.models import (
+    AbstractBaseUser,
+    BaseUserManager,
+    PermissionsMixin,
+)
 from django.core.validators import RegexValidator
 from django.conf import settings
 
 GRADE_CHOICES = [(i, str(i)) for i in range(0, 5)]
-SECTION_CHOICES = [(chr(i), chr(i)) for i in range(ord('А'), ord('Я') + 1)]
+SECTION_CHOICES = [(chr(i), chr(i)) for i in range(ord("А"), ord("Я") + 1)]
 GENDER_CHOICES = [
-    ('M', 'Male'),
-    ('F', 'Female'),
-    ('O', 'Other'),
+    ("M", "Male"),
+    ("F", "Female"),
+    ("O", "Other"),
 ]
 LANGUAGE_CHOICES = [
-    ('ru', 'Russian'),
-    ('kz', 'Kazakh'),
-    ('en', 'English'),
+    ("ru", "Russian"),
+    ("kz", "Kazakh"),
+    ("en", "English"),
 ]
+
 
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
         if not email:
-            raise ValueError('The Email field must be set')
+            raise ValueError("The Email field must be set")
         email = self.normalize_email(email)
         user = self.model(email=email, **extra_fields)
         user.set_password(password)
@@ -29,29 +34,35 @@ class CustomUserManager(BaseUserManager):
         return user
 
     def create_superuser(self, email, password=None, **extra_fields):
-        extra_fields.setdefault('is_staff', True)
-        extra_fields.setdefault('is_superuser', True)
-        extra_fields.setdefault('is_active', True)
+        extra_fields.setdefault("is_staff", True)
+        extra_fields.setdefault("is_superuser", True)
+        extra_fields.setdefault("is_active", True)
 
-        if extra_fields.get('is_staff') is not True:
-            raise ValueError('Superuser must have is_staff=True.')
-        if extra_fields.get('is_superuser') is not True:
-            raise ValueError('Superuser must have is_superuser=True.')
+        if extra_fields.get("is_staff") is not True:
+            raise ValueError("Superuser must have is_staff=True.")
+        if extra_fields.get("is_superuser") is not True:
+            raise ValueError("Superuser must have is_superuser=True.")
 
         return self.create_user(email, password, **extra_fields)
 
+
 class User(AbstractBaseUser, PermissionsMixin):
     ROLE_CHOICES = (
-        ('student', 'Student'),
-        ('parent', 'Parent'),
-        ('supervisor', 'Supervisor'),
+        ("student", "Student"),
+        ("parent", "Parent"),
+        ("supervisor", "Supervisor"),
     )
 
     email = models.EmailField(unique=True, db_index=True)
     first_name = models.CharField(max_length=30)
     last_name = models.CharField(max_length=150)
-    phone_regex = RegexValidator(regex=r'^\+?1?\d{9,15}$', message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.")
-    phone_number = models.CharField(validators=[phone_regex], max_length=17, blank=True, null=True)
+    phone_regex = RegexValidator(
+        regex=r"^\+?1?\d{9,15}$",
+        message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.",
+    )
+    phone_number = models.CharField(
+        validators=[phone_regex], max_length=17, blank=True, null=True
+    )
     role = models.CharField(max_length=15, choices=ROLE_CHOICES, blank=True, null=True)
     is_active = models.BooleanField(default=False)
     is_staff = models.BooleanField(default=False)
@@ -61,79 +72,108 @@ class User(AbstractBaseUser, PermissionsMixin):
     reset_password_token = models.UUIDField(editable=False, null=True, blank=True)
     reset_password_token_expires_at = models.DateTimeField(null=True, blank=True)
 
-    USERNAME_FIELD = 'email'
+    USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
 
     objects = CustomUserManager()
 
     @property
     def is_student(self):
-        return self.role == 'student'
+        return self.role == "student"
 
     @property
     def is_parent(self):
-        return self.role == 'parent'
+        return self.role == "parent"
 
     @property
     def is_supervisor(self):
-        return self.role == 'supervisor'
-    
+        return self.role == "supervisor"
+
     @property
     def is_activation_token_expired(self):
-        return self.activation_token_expires_at < timezone.now() if self.activation_token_expires_at else True
-    
+        return (
+            self.activation_token_expires_at < timezone.now()
+            if self.activation_token_expires_at
+            else True
+        )
+
     @property
     def is_reset_password_token_expired(self):
-        return self.reset_password_token_expires_at < timezone.now() if self.reset_password_token_expires_at else True
+        return (
+            self.reset_password_token_expires_at < timezone.now()
+            if self.reset_password_token_expires_at
+            else True
+        )
+
+    def get_short_name(self):
+        return self.first_name
+
+    def get_full_name(self):
+        """Return the full name for the user."""
+        return f"{self.first_name} {self.last_name}".strip()
 
     def __str__(self):
         return f"{self.email} - {self.get_role_display()}"
+
 
 class School(models.Model):
     name = models.CharField(max_length=150)
     city = models.CharField(max_length=150)
     email = models.EmailField(unique=False)
-    supervisor = models.OneToOneField(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='school')
+    supervisor = models.OneToOneField(
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name="school"
+    )
 
     def __str__(self):
         return f"{self.name} ({self.city})"
 
+
 class Class(models.Model):
-    school = models.ForeignKey(School, on_delete=models.CASCADE, related_name='classes')
+    school = models.ForeignKey(School, on_delete=models.CASCADE, related_name="classes")
     grade = models.IntegerField(choices=GRADE_CHOICES)
     section = models.CharField(max_length=1, choices=SECTION_CHOICES)
-    language = models.CharField(max_length=50, choices=LANGUAGE_CHOICES, default='ru')
+    language = models.CharField(max_length=50, choices=LANGUAGE_CHOICES, default="ru")
 
     def __str__(self):
         return f"{self.grade}{self.section}"
+
 
 class LevelRequirement(models.Model):
     level = models.PositiveIntegerField(unique=True)
     cups_required = models.PositiveIntegerField()
 
     def __str__(self):
-        return f'Level {self.level}: {self.cups_required} cups'
+        return f"Level {self.level}: {self.cups_required} cups"
+
 
 class Student(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='student')
-    school_class = models.ForeignKey(Class, on_delete=models.SET_NULL, null=True, blank=True, related_name='students')
-    school = models.ForeignKey(School, on_delete=models.SET_NULL, null=True, blank=True, related_name='students')
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="student")
+    school_class = models.ForeignKey(
+        Class, on_delete=models.SET_NULL, null=True, blank=True, related_name="students"
+    )
+    school = models.ForeignKey(
+        School,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="students",
+    )
     grade = models.IntegerField(choices=GRADE_CHOICES)
     level = models.PositiveIntegerField(default=1)
     streak = models.PositiveIntegerField(default=0)
     cups = models.PositiveIntegerField(default=0)
     stars = models.PositiveIntegerField(default=0)
     gender = models.CharField(max_length=1, choices=GENDER_CHOICES, default="O")
-    language = models.CharField(max_length=50, choices=LANGUAGE_CHOICES, default='ru')
-    avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
+    language = models.CharField(max_length=50, choices=LANGUAGE_CHOICES, default="ru")
+    avatar = models.ImageField(upload_to="avatars/", null=True, blank=True)
     birth_date = models.DateField(default=date(2015, 1, 1), blank=True, null=True)
     last_task_completed_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f"[Student: {self.pk}] {self.user.first_name} {self.user.last_name}"
-    
+
     def update_level(self):
-        for requirement in LevelRequirement.objects.order_by('level'):
+        for requirement in LevelRequirement.objects.order_by("level"):
             if self.cups >= requirement.cups_required:
                 self.level = requirement.level
             else:
@@ -160,20 +200,24 @@ class Student(models.Model):
         self.stars += question_reward
         self.save()
 
+
 class Parent(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='parent')
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="parent")
 
     def __str__(self):
         return f"[Parent] {self.user.first_name} {self.user.last_name}"
 
+
 class Child(models.Model):
-    parent = models.ForeignKey(Parent, on_delete=models.CASCADE, related_name='children')
+    parent = models.ForeignKey(
+        Parent, on_delete=models.CASCADE, related_name="children"
+    )
     first_name = models.CharField(max_length=30)
     last_name = models.CharField(max_length=150)
     grade = models.IntegerField(choices=GRADE_CHOICES)
-    avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
+    avatar = models.ImageField(upload_to="avatars/", null=True, blank=True)
     gender = models.CharField(max_length=1, choices=GENDER_CHOICES, default="O")
-    language = models.CharField(max_length=50, choices=LANGUAGE_CHOICES, default='ru')
+    language = models.CharField(max_length=50, choices=LANGUAGE_CHOICES, default="ru")
     cups = models.PositiveIntegerField(default=0)
     stars = models.PositiveIntegerField(default=0)
     level = models.PositiveIntegerField(default=1)
@@ -185,7 +229,7 @@ class Child(models.Model):
         return f"[Child: {self.pk}] {self.first_name} {self.last_name}"
 
     def update_level(self):
-        for requirement in LevelRequirement.objects.order_by('level'):
+        for requirement in LevelRequirement.objects.order_by("level"):
             if self.cups >= requirement.cups_required:
                 self.level = requirement.level
             else:

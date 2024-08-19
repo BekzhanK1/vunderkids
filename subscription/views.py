@@ -1,10 +1,27 @@
+from django.shortcuts import get_object_or_404
+import requests
 from rest_framework import viewsets, status
 from rest_framework.response import Response
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
 from account.permissions import IsParent, IsStudent, IsSuperUser
-from .models import Plan, Subscription
-from .serializers import PlanSerializer, SubscriptionModelSerializer, SubscriptionCreateSerializer
+from .models import Payment, Plan, Subscription
+from .utils import generate_invoice_id
+from django.conf import settings
+from django.views.decorators.csrf import csrf_exempt
+from .serializers import (
+    PaymentSerializer,
+    PlanSerializer,
+    SubscriptionModelSerializer,
+    SubscriptionCreateSerializer,
+)
+
+TERMINAL_ID = settings.HALYK_TERMINAL_ID
+CLIENT_ID = settings.HALYK_CLIENT_ID
+CLIENT_SECRET = settings.HALYK_CLIENT_SECRET
+
 
 class PlanViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Plan.objects.filter(is_enabled=True)
@@ -17,7 +34,7 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_permissions(self):
-        if self.action == 'create':
+        if self.action == "create":
             self.permission_classes = [IsParent | IsStudent]
         else:
             self.permission_classes = [IsSuperUser]
@@ -31,10 +48,14 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     def create(self, request, *args, **kwargs):
-        serializer = SubscriptionCreateSerializer(data=request.data, context={'request': request})
+        serializer = SubscriptionCreateSerializer(
+            data=request.data, context={"request": request}
+        )
         serializer.is_valid(raise_exception=True)
         subscription = serializer.save()
-        return Response(self.serializer_class(subscription).data, status=status.HTTP_201_CREATED)
+        return Response(
+            self.serializer_class(subscription).data, status=status.HTTP_201_CREATED
+        )
 
     def update(self, request, *args, **kwargs):
         raise PermissionDenied("You do not have permission to update subscriptions.")
@@ -46,3 +67,114 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
         if self.request.user.is_superuser:
             return Subscription.objects.all()
         return Subscription.objects.filter(user=self.request.user)
+
+
+@api_view(["POST"])
+def initiate_payment(request):
+    user = request.user
+    if not user.is_parent:
+        return Response(
+            {"message": "Only parents can initiate payments"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    payment = Payment.objects.filter(user=user, status="pending").first()
+    if payment:
+        return Response(
+            {"message": "You have a pending payment"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    invoice_id = generate_invoice_id()
+    invoice_id_alt = generate_invoice_id()
+    duration = request.data.get("duration")
+    plan = get_object_or_404(
+        Plan.objects.exclude(duration="free-trial"), duration=duration
+    )
+    amount = plan.price
+    subscription = Subscription.objects.filter(user=user).first()
+    if subscription:
+        if not subscription.is_free_trial() and subscription.is_active:
+            return Response(
+                {"message": "You have active subscription"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+    payment = Payment.objects.create(
+        invoice_id=invoice_id,
+        invoice_id_alt=invoice_id_alt,
+        user=user,
+        duration=plan.duration,
+        amount=amount,
+        phone=user.phone_number,
+        email=user.email,
+    )
+
+    post_link = f"https://api.vunderkids.kz/api/payments/payment-confirmation/"
+    failure_post_link = f"https://api.vunderkids.kz/api/payments/payment-failure/"
+    payment_data = {
+        "grant_type": "client_credentials",
+        "scope": "webapi usermanagement email_send verification statement statistics payment",
+        "client_id": CLIENT_ID,
+        "client_secret": CLIENT_SECRET,
+        "invoiceID": invoice_id,
+        "amount": amount,
+        "currency": "KZT",
+        "terminal": TERMINAL_ID,
+        "postLink": post_link,
+        "failurePostLink": failure_post_link,
+    }
+
+    response = requests.post(
+        "https://testoauth.homebank.kz/epay2/oauth2/token",
+        data=payment_data,
+    )
+
+    if response.status_code == 200:
+        payment_serializer = PaymentSerializer(payment)
+        token_json = response.json()
+        payment.status = "pending"
+        payment.save()
+        return Response({"payment": payment_serializer.data, "token": token_json})
+
+    else:
+        return Response(
+            {"error": "Failed to initiate payment", "details": response.text},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+
+@csrf_exempt
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def payment_confirmation(request):
+    invoice_id = request.data.get("invoiceId")
+    status_code = request.data.get("code")
+
+    payment = get_object_or_404(Payment, invoice_id=invoice_id, status="pending")
+    user = payment.user
+
+    if status_code == "ok":
+        payment.status = "success"
+        payment.save()
+
+        plan_name = payment.duration
+        serializer = SubscriptionCreateSerializer(
+            data={"plan_name": plan_name}, context={"request": request, "user": user}
+        )
+
+        if serializer.is_valid():
+            subscription = serializer.save()
+            return Response(
+                {
+                    "message": "Subscription created successfully",
+                    "subscription_id": subscription.id,
+                },
+                status=status.HTTP_201_CREATED,
+            )
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    else:
+        payment.status = "failed"
+        payment.save()
+        return Response(
+            {"message": "Payment failed"}, status=status.HTTP_400_BAD_REQUEST
+        )
