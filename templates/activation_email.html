@@ -25,8 +25,10 @@
 
         a {
             background-color: #00639E;
-            color: white;
+            color: rgb(223, 183, 1);
             padding: 10px 20px;
+            font-weight: bold;
+            font-size: large;
             text-decoration: none;
             border-radius: 5px;
         }
@@ -35,24 +37,9 @@
             color: #333;
         }
 
-        .password {
-            display: none;
-            color: #333;
-        }
-
-        .reveal-password:hover .password {
-            display: inline;
-        }
-
-        .reveal-password:hover .masked-password {
-            display: none;
-        }
-
-        .masked-password {
-            display: inline;
-            color: #00639E;
-            cursor: pointer;
-            text-decoration: underline;
+        .warning {
+            color: red;
+            font-weight: bold;
         }
     </style>
 </head>
@@ -67,9 +54,8 @@
         <p style="text-align: center; margin: 20px 0;">
             <a href="{{ activation_url }}">Активировать аккаунт</a>
         </p>
-        <p>Ваш пароль: <span class="reveal-password"><span class="masked-password">[показать]</span><span
-                    class="password">{{ password }}</span></span></p>
-        <p>НИКОМУ НЕ СООБЩАЙТЕ ПАРОЛЬ!</p>
+        <p>Ваш пароль: <strong>{{ password }}</strong></p>
+        <p class="warning">НИКОМУ НЕ СООБЩАЙТЕ ПАРОЛЬ!</p>
     </div>
 </body>
 

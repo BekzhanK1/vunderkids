@@ -20,60 +20,83 @@ def send_mass_html_mail(datatuple, fail_silently=False):
         msg = EmailMultiAlternatives(subject, text_content, from_email, recipient_list)
         msg.attach_alternative(html_content, "text/html")
         messages.append(msg)
-    connection = get_connection(fail_silently=fail_silently)
-    return connection.send_messages(messages)
+
+    try:
+        # Try sending all messages in bulk
+        connection = get_connection(fail_silently=fail_silently)
+        connection.send_messages(messages)
+    except Exception as e:
+        # If there is an issue, fallback to sending individually
+        if not fail_silently:
+            raise e
+        for message in messages:
+            try:
+                message.send(fail_silently=fail_silently)
+            except Exception as single_email_exception:
+                if not fail_silently:
+                    raise single_email_exception
+
+    return len(messages)
 
 
 @shared_task
 def send_daily_email_to_all_students():
-    students = Student.objects.all().select_related('user')
+    students = Student.objects.all().select_related("user")
     datatuple = []
     for student in students:
-        html_content, text_content = render_email(student.user.first_name, student.user.last_name, student.cups, student.level)
-        msg = (
-            'Daily Update',
-            text_content,
-            html_content,
-            settings.DEFAULT_FROM_EMAIL,
-            [student.user.email]
-        )
-        datatuple.append(msg)
-    
-    send_mass_html_mail(datatuple, fail_silently=False)
+        if student.user.is_active:  # Ensure we only email active users
+            html_content, text_content = render_email(
+                student.user.first_name,
+                student.user.last_name,
+                student.cups,
+                student.level,
+            )
+            msg = (
+                "Daily Update",
+                text_content,
+                html_content,
+                settings.DEFAULT_FROM_EMAIL,
+                [student.user.email],
+            )
+            datatuple.append(msg)
+
+    if datatuple:
+        send_mass_html_mail(datatuple, fail_silently=False)
 
 
 @shared_task
 def send_daily_email_to_all_parents():
-    parents = Parent.objects.prefetch_related('children').select_related('user').all()
+    parents = Parent.objects.all().select_related("user").prefetch_related("children")
     datatuple = []
     for parent in parents:
-        if parent.user.is_active:
-            if parent.children.all().count() == 0:
-                return
+        if (
+            parent.user.is_active and parent.children.exists()
+        ):  # Ensure the parent is active and has children
             context = {
-                'first_name': parent.user.first_name,
-                'last_name': parent.user.last_name,
-                'children': parent.children.all()
+                "first_name": parent.user.first_name,
+                "last_name": parent.user.last_name,
+                "children": parent.children.all(),
             }
-            html_content = render_to_string('parent_email_template.html', context)
+            html_content = render_to_string("parent_email_template.html", context)
             text_content = strip_tags(html_content)
             msg = (
-                'Your Children’s Daily Update',
+                "Your Children’s Daily Update",
                 text_content,
                 html_content,
                 settings.DEFAULT_FROM_EMAIL,
-                [parent.user.email]
+                [parent.user.email],
             )
             datatuple.append(msg)
-    
-    send_mass_html_mail(datatuple, fail_silently=False)
+
+    if datatuple:
+        send_mass_html_mail(datatuple, fail_silently=False)
 
 
 @shared_task
 def send_mass_activation_email(user_ids):
     users = User.objects.filter(id__in=user_ids)
     datatuple = []
-    
+
     for user in users:
         password = generate_password()
         user.set_password(password)
@@ -81,19 +104,19 @@ def send_mass_activation_email(user_ids):
         user.activation_token_expires_at = timezone.now() + timedelta(days=1)
         user.save()
         activation_url = f"{frontend_url}activate/{user.activation_token}/"
-        context = {'user': user, 'activation_url': activation_url, 'password': password}
-        subject = 'Activate your Vunderkids Account'
-        html_message = render_to_string('activation_email.html', context)
+        context = {"user": user, "activation_url": activation_url, "password": password}
+        subject = "Activate your Vunderkids Account"
+        html_message = render_to_string("activation_email.html", context)
         plain_message = strip_tags(html_message)
         msg = (
             subject,
             plain_message,
             html_message,
             settings.DEFAULT_FROM_EMAIL,
-            [user.email]
+            [user.email],
         )
         datatuple.append(msg)
-    
+
     send_mass_html_mail(datatuple, fail_silently=False)
 
 
@@ -104,9 +127,9 @@ def send_activation_email(user_id, password):
     user.activation_token_expires_at = timezone.now() + timedelta(days=1)
     user.save()
     activation_url = f"{frontend_url}activate/{user.activation_token}/"
-    context = {'user': user, 'activation_url': activation_url, 'password': password}
-    subject = 'Activate your Vunderkids Account'
-    html_message = render_to_string('activation_email.html', context)
+    context = {"user": user, "activation_url": activation_url, "password": password}
+    subject = "Activate your Vunderkids Account"
+    html_message = render_to_string("activation_email.html", context)
     plain_message = strip_tags(html_message)
     from_email = settings.DEFAULT_FROM_EMAIL
     to = user.email
@@ -120,9 +143,9 @@ def send_activation_email(user_id, password):
 def send_password_reset_request_email(user_id):
     user = User.objects.get(pk=user_id)
     reset_password_url = f"{frontend_url}reset-password/{user.reset_password_token}/"
-    context = {'user': user, 'reset_password_url': reset_password_url}
-    subject = 'Password reset Vunderkids account'
-    html_message = render_to_string('password_reset_request_email.html', context)
+    context = {"user": user, "reset_password_url": reset_password_url}
+    subject = "Password reset Vunderkids account"
+    html_message = render_to_string("password_reset_request_email.html", context)
     plain_message = strip_tags(html_message)
     from_email = settings.DEFAULT_FROM_EMAIL
     to = user.email
@@ -132,7 +155,6 @@ def send_password_reset_request_email(user_id):
     msg.send()
 
 
-
 def is_losing_streak(last_date):
     now = timezone.now()
     today = now.date()
@@ -140,6 +162,7 @@ def is_losing_streak(last_date):
     if last_date != today:
         return True
     return False
+
 
 @shared_task
 def check_streaks():
@@ -158,7 +181,7 @@ def check_streaks():
         else:
             student.streak = 0
             student.save()
-    
+
     parents = Parent.objects.all()
     for parent in parents:
         for child in parent.children.all():
@@ -176,22 +199,22 @@ def check_streaks():
 
 @shared_task
 def delete_expired_subscriptions():
-    subscriptions = Subscription.objects.all().select_related('user')
+    subscriptions = Subscription.objects.all().select_related("user")
 
     inactive_subscriptions = [sub for sub in subscriptions if not sub.is_active]
 
     datatuple = []
     for subscription in inactive_subscriptions:
         user = subscription.user
-        context = {'user': user}
-        html_message = render_to_string('subscription_expired_email.html', context)
+        context = {"user": user}
+        html_message = render_to_string("subscription_expired_email.html", context)
         plain_message = strip_tags(html_message)
         msg = (
-            'Your subscription has expired',
+            "Your subscription has expired",
             plain_message,
             html_message,
             settings.DEFAULT_FROM_EMAIL,
-            [user.email]
+            [user.email],
         )
         datatuple.append(msg)
 
@@ -204,6 +227,7 @@ def delete_expired_subscriptions():
         subscription.delete()
 
     return f"Deleted {count} expired subscriptions"
+
 
 @shared_task
 def example_task():
