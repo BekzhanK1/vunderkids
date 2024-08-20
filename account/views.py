@@ -546,7 +546,7 @@ class TopStudentsView(APIView):
         top_students = []
 
         if rating_type == "class":
-            if current_student.school_class:
+            if current_student.school_class is not None:
                 top_students = Student.objects.filter(
                     school_class=current_student.school_class
                 ).order_by("-cups")[:10]
