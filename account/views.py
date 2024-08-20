@@ -546,7 +546,7 @@ class TopStudentsView(APIView):
         top_students = []
 
         if rating_type == "class":
-            if current_student.school_class >= 0:
+            if current_student.school_class is not None:
                 top_students = Student.objects.filter(
                     school_class=current_student.school_class
                 ).order_by("-cups")[:10]
@@ -556,7 +556,7 @@ class TopStudentsView(APIView):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
         elif rating_type == "school":
-            if current_student.school:
+            if current_student.school is not None:
                 top_students = Student.objects.filter(
                     school=current_student.school
                 ).order_by("-cups")[:10]
@@ -566,7 +566,7 @@ class TopStudentsView(APIView):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
         elif rating_type == "global":
-            if current_student.grade:
+            if current_student.grade is not None:
                 top_students = Student.objects.filter(
                     grade=current_student.grade
                 ).order_by("-cups")[:10]
@@ -594,7 +594,7 @@ class TopStudentsView(APIView):
         top_children = []
 
         if rating_type in ["class", "school", "global"]:
-            if current_child.grade:
+            if current_child.grade is not None:
                 top_children = Child.objects.filter(grade=current_child.grade).order_by(
                     "-cups"
                 )[:10]
