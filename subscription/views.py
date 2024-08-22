@@ -122,7 +122,7 @@ def initiate_payment(request):
     }
 
     response = requests.post(
-        "https://testoauth.homebank.kz/epay2/oauth2/token",
+        "https://epay-oauth.homebank.kz/oauth2/token",
         data=payment_data,
     )
 
