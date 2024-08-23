@@ -1,3 +1,4 @@
+import json
 from django.shortcuts import get_object_or_404
 import requests
 from rest_framework import viewsets, status
@@ -92,7 +93,9 @@ def initiate_payment(request):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-    existing_payment = Payment.objects.filter(user=user, status="pending").first()
+    existing_payment = Payment.objects.filter(
+        user=user, status="pending", duration=duration
+    ).first()
     if existing_payment:
         payment = existing_payment
     else:
