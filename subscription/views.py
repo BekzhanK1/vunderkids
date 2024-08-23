@@ -105,7 +105,6 @@ def initiate_payment(request):
             user=user,
             duration=plan.duration,
             amount=amount,
-            phone=user.phone_number,
             email=user.email,
         )
 
