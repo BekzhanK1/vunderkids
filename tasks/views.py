@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from account.permissions import IsSuperUserOrStaffOrReadOnly, HasSubscription
 from account.models import Student, Child
+from rest_framework.permissions import AllowAny
 from .models import (
     Answer,
     Chapter,
@@ -436,7 +437,7 @@ class QuestionViewSet(viewsets.ModelViewSet):
 
 
 class PlayGameView(APIView):
-    permission_classes = [HasSubscription, IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get(self, request):
         user = request.user
