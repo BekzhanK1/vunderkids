@@ -50,6 +50,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     ROLE_CHOICES = (
         ("student", "Student"),
         ("parent", "Parent"),
+        ("teacher", "Teacher"),
         ("supervisor", "Supervisor"),
     )
 
@@ -84,6 +85,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     @property
     def is_parent(self):
         return self.role == "parent"
+
+    @property
+    def is_teacher(self):
+        return self.role == "teacher"
 
     @property
     def is_supervisor(self):
