@@ -40,7 +40,9 @@ class Subscription(models.Model):
         super().save(*args, **kwargs)
 
     def calculate_end_date(self):
-        if self.plan.duration == "monthly":
+        if self.plan.duration == "free-trial":
+            return self.start_date + timedelta(days=2)
+        elif self.plan.duration == "monthly":
             return self.start_date + timedelta(days=30)
         elif self.plan.duration == "6-month":
             return self.start_date + timedelta(days=180)
@@ -53,8 +55,6 @@ class Subscription(models.Model):
 
     @property
     def is_active(self):
-        if self.plan.duration == "free-trial":
-            return self.is_free_trial_active()
         return self.end_date is not None and timezone.now() < self.end_date
 
     def is_free_trial_active(self):
