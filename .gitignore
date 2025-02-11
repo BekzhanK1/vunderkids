@@ -3,6 +3,7 @@
 __pycache__/
 staticfiles/
 
+.vscode/
 # Ignore environment files
 .env
 .venv/
