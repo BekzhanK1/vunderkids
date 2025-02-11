@@ -6,6 +6,18 @@ services:
     networks:
       - vunderkids_net
 
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: protosedu
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_DB: protosedu_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - vunderkids_net
+
   web:
     build: .
     command:
@@ -15,7 +27,7 @@ services:
         "--bind",
         "0.0.0.0:8000",
         "--workers",
-        "4",
+        "4"
       ]
     volumes:
       - .:/django
@@ -23,6 +35,10 @@ services:
       - "8000:8000"
     environment:
       CELERY_BROKER_URL: redis://redis:6379/0
+      DATABASE_URL: postgres://vunderkids:securepassword@db:5432/vunderkids_db
+    depends_on:
+      - redis
+      - db
     networks:
       - vunderkids_net
 
@@ -33,9 +49,11 @@ services:
       - .:/django
     environment:
       CELERY_BROKER_URL: redis://redis:6379/0
+      DATABASE_URL: postgres://vunderkids:securepassword@db:5432/vunderkids_db
     depends_on:
       - web
       - redis
+      - db
     networks:
       - vunderkids_net
 
@@ -46,11 +64,16 @@ services:
       - .:/django
     environment:
       CELERY_BROKER_URL: redis://redis:6379/0
+      DATABASE_URL: postgres://vunderkids:securepassword@db:5432/vunderkids_db
     depends_on:
       - web
       - redis
+      - db
     networks:
       - vunderkids_net
+
+volumes:
+  postgres_data:
 
 networks:
   vunderkids_net:

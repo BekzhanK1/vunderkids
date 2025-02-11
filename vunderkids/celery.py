@@ -40,8 +40,4 @@ app.conf.beat_schedule = {
         "task": "account.tasks.delete_expired_subscriptions",
         "schedule": crontab(hour=2, minute=2),
     },
-    "print_hello_1000_times": {
-        "task": "account.tasks.example_task",
-        "schedule": crontab(hour=13, minute=53),
-    },
 }

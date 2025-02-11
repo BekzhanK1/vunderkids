@@ -227,9 +227,3 @@ def delete_expired_subscriptions():
         subscription.delete()
 
     return f"Deleted {count} expired subscriptions"
-
-
-@shared_task
-def example_task():
-    for i in range(1000):
-        print("HELLO")

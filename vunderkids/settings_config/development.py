@@ -17,6 +17,12 @@ DATABASE_PORT = os.getenv("DATABASE_PORT", "5432")
 
 DATABASE_TYPE = os.getenv("DATABASE_TYPE")
 print(f"database = {DATABASE_TYPE}")
+print(f"database = {DATABASE_NAME}")
+print(f"database = {DATABASE_USER}")
+print(f"database = {DATABASE_PASSWORD}")
+print(f"database = {DATABASE_HOST}")
+print(f"database = {DATABASE_PORT}")
+
 
 if DATABASE_TYPE == "POSTGRES":
     DATABASES = {
@@ -39,5 +45,5 @@ else:
     }
     print("SQLITE IS RUNNING")
 
-CELERY_BROKER_URL = "redis://localhost:6379/0"
-CELERY_RESULT_BACKEND = "redis://localhost:6379/0"
+CELERY_BROKER_URL = "redis://redis:6379/0"
+CELERY_RESULT_BACKEND = "redis://redis:6379/0"
