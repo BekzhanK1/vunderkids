@@ -41,6 +41,9 @@ from .utils import generate_password
 
 
 class ActivateAccount(APIView):
+
+    permission_classes = [AllowAny]
+
     def get(self, request, token):
         try:
             user = User.objects.get(activation_token=token)
