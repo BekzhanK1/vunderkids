@@ -15,11 +15,11 @@ jobs:
           install -m 600 -D /dev/null ~/.ssh/id_rsa
           echo "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.SERVER_HOST }} > ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts  # 🔥 Fixes Host Key Verification
 
       - name: Connect to Server and Deploy
         run: |
-          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd ${{ secrets.WORK_DIR }} && git pull origin main && docker compose down && docker compose up --build -d"
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd ${{ secrets.WORK_DIR }} && git pull origin main && docker-compose down && docker-compose up --build -d"
 
       - name: Cleanup
         run: rm -rf ~/.ssh
