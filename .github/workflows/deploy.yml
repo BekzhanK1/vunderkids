@@ -12,4 +12,4 @@ jobs:
     steps:
       - name: Install SSH and Connect with Password
         run: |
-          sshpass -p "${{ secrets.SERVER_PASSWORD }}" ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd protosedu-prod/protosedu-backend && git pull origin main && docker compose down && docker compose up --build -d"
+          sshpass -p "${{ secrets.SERVER_PASSWORD }}" ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd /home/protosedu/protosedu-prod/protosedu-backend && git pull origin main && docker compose down && docker compose up --build -d"
