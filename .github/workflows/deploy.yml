@@ -13,7 +13,15 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Install SSH and Connect with Password
+      - name: Connect to Server
+        run: |
+          sshpass -p "${{ secrets.SERVER_PASSWORD }}" ssh -t -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "echo Debug: Connected to server"
+
+      - name: Echo Hello World
+        run: |
+          sshpass -p "${{ secrets.SERVER_PASSWORD }}" ssh -t -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "echo Hello World"
+
+      - name: Change Directory and List Files
         run: |
           sshpass -p "${{ secrets.SERVER_PASSWORD }}" ssh -t -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
-          "bash -c 'echo Debug: Connecting to server && cd "${{ secrets.WORK_DIR }}" && echo Debug: Changed directory to ${{ secrets.WORK_DIR }} && ls -l'"
+          "bash -c 'cd "${{ secrets.WORK_DIR }}" && echo Debug: Changed directory to ${{ secrets.WORK_DIR }} && ls -l'"
