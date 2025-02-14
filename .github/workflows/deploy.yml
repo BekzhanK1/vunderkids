@@ -12,4 +12,4 @@ jobs:
     steps:
       - name: Install SSH and Connect with Password
         run: |
-          sshpass -p "${{ secrets.SERVER_PASSWORD }}" ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "ls"
+          sshpass -p "${{ secrets.SERVER_PASSWORD }}" ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "echo 'Debug: Connecting to server'; cd '${{ secrets.WORK_DIR }}' && echo 'Debug: Changed directory to ${{ secrets.WORK_DIR }}'; ls"
