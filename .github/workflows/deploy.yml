@@ -1,24 +1,23 @@
-name: Deploy Backend
+name: Deploy
 
 on:
   push:
     branches:
-      - prod
+      - main
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: prod
-
-      - name: Pull the latest code
-        run: git pull origin prod
-
-      - name: Trigger deployment workflow
-        uses: peter-evans/repository-dispatch@v1
-        with:
-          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-          repository: BekzhanK1/vunderkids
-          event-type: backend-updated
+    - name: Deploy via SSH
+      uses: appleboy/ssh-action@v0.1.10
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        key: ${{ secrets.SERVER_SSH_KEY }}
+        script: |
+          cd /protosedu-prod/protosedu-backend
+          git pull origin main
+          docker-compose down
+          docker-compose up --build -d
