@@ -1,4 +1,4 @@
-name: Debug Secrets
+name: Deploy
 
 on:
   push:
@@ -6,14 +6,20 @@ on:
       - main
 
 jobs:
-  debug:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check Secrets (Without Exposing)
+      - name: Install SSH Keys
         run: |
-          echo "Checking Secrets..."
-          echo "SERVER_HOST: ${{ secrets.SERVER_HOST }}"
-          echo "SERVER_USER: ${{ secrets.SERVER_USER }}"
-          echo "SERVER_SSH_KEY Length: $(echo "${{ secrets.SERVER_SSH_KEY }}" | wc -c)"
-          echo "SERVER_SSH_KEY: $(echo "${{ secrets.SERVER_SSH_KEY }}" | head -c 100)..."
+          install -m 600 -D /dev/null ~/.ssh/id_rsa
+          echo "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.SERVER_HOST }} > ~/.ssh/known_hosts
+
+      - name: Connect to Server and Deploy
+        run: |
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd ${{ secrets.WORK_DIR }} && git pull origin main && docker compose down && docker compose up --build -d"
+
+      - name: Cleanup
+        run: rm -rf ~/.ssh
