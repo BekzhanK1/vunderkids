@@ -13,15 +13,15 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Connect to Server
+      - name: Connect to Server and Run Deployment
         run: |
-          sshpass -p "${{ secrets.SERVER_PASSWORD }}" ssh -t -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "echo Debug: Connected to server"
-
-      - name: Echo Hello World
-        run: |
-          sshpass -p "${{ secrets.SERVER_PASSWORD }}" ssh -t -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "echo Hello World"
-
-      - name: Change Directory and List Files
-        run: |
-          sshpass -p "${{ secrets.SERVER_PASSWORD }}" ssh -t -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
-          "bash -c 'cd "${{ secrets.WORK_DIR }}" && echo Debug: Changed directory to ${{ secrets.WORK_DIR }} && ls -l'"
+          sshpass -p "${{ secrets.SERVER_PASSWORD }}" ssh -t -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+            echo "Debug: Connected to server"
+            echo "Hello World"
+            cd "${{ secrets.WORK_DIR }}"
+            echo "Debug: Changed directory to ${{ secrets.WORK_DIR }}"
+            ls -l
+            git pull origin main
+            docker-compose down
+            docker-compose up --build -d
+          EOF
