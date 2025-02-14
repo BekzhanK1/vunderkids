@@ -140,6 +140,15 @@ AUTHENTICATION_BACKENDS = [
     "account.backends.EmailBackend",
 ]
 
+AWS_ACCESS_KEY_ID = os.getenv("YANDEX_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = os.getenv("YANDEX_SECRET_ACCESS_KEY")
+AWS_STORAGE_BUCKET_NAME = os.getenv("YANDEX_BUCKET_NAME")
+AWS_S3_ENDPOINT_URL = "https://storage.yandexcloud.kz"
+AWS_S3_REGION_NAME = "ru-central1"
+AWS_S3_SIGNATURE_VERSION = "s3"
+AWS_S3_ADDRESSING_STYLE = "path"
+
+
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "Asia/Aqtau"
 USE_I18N = True
@@ -148,12 +157,8 @@ USE_TZ = False
 STATIC_URL = "/staticfiles/"
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 
-GS_BUCKET_NAME = os.getenv("GS_BUCKET_NAME")
-GS_CREDENTIALS = service_account.Credentials.from_service_account_file(
-    os.path.join(BASE_DIR, "secrets/google_storage.json")
-)
-MEDIA_URL = f"https://storage.googleapis.com/{GS_BUCKET_NAME}/media/"
-DEFAULT_FILE_STORAGE = "storages.backends.gcloud.GoogleCloudStorage"
+MEDIA_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.storage.yandexcloud.kz/media/"
+DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -164,23 +169,47 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = "vunderkidsedu@gmail.com"
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
 DEFAULT_FROM_EMAIL = "vunderkidsedu@gmail.com"
-print(EMAIL_HOST_PASSWORD)
 
 HALYK_TERMINAL_ID = os.getenv("HALYK_TERMINAL_ID")
 HALYK_CLIENT_ID = os.getenv("HALYK_CLIENT_ID")
 HALYK_CLIENT_SECRET = os.getenv("HALYK_CLIENT_SECRET")
 
-
-# AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
-# AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
-# AWS_STORAGE_BUCKET_NAME = os.getenv("AWS_STORAGE_BUCKET_NAME")
-# AWS_S3_REGION_NAME = os.getenv("AWS_S3_REGION_NAME")
-# AWS_S3_SIGNATURE_VERSION = 's3v4'
-# AWS_S3_FILE_OVERWRITE = False
-# AWS_DEFAULT_ACL = None
-# AWS_S3_VERIFY = True
-
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 
 QUESTION_REWARD = 5
+
+
+DATABASE_NAME = os.getenv("DATABASE_NAME")
+DATABASE_USER = os.getenv("DATABASE_USER")
+DATABASE_PASSWORD = os.getenv("DATABASE_PASSWORD")
+DATABASE_HOST = os.getenv("DATABASE_HOST", "localhost")
+DATABASE_PORT = os.getenv("DATABASE_PORT", "5432")
+DATABASE_TYPE = os.getenv("DATABASE_TYPE")
+STAGE = os.getenv("STAGE")
+
+
+if DATABASE_TYPE == "POSTGRES" or STAGE == "PROD":
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": DATABASE_NAME,
+            "USER": DATABASE_USER,
+            "PASSWORD": DATABASE_PASSWORD,
+            "HOST": DATABASE_HOST,
+            "PORT": DATABASE_PORT,
+        }
+    }
+    print("POSTGRES IS RUNNING")
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": os.path.join(BASE_DIR, "db.sqlite3"),
+        }
+    }
+    print("SQLITE IS RUNNING")
+
+
+CELERY_BROKER_URL = "redis://redis:6379/0"
+CELERY_RESULT_BACKEND = "redis://redis:6379/0"

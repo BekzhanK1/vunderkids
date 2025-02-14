@@ -108,8 +108,8 @@ def initiate_payment(request):
             email=user.email,
         )
 
-    post_link = f"https://api.vunderkids.kz/api/payments/payment-confirmation/"
-    failure_post_link = f"https://api.vunderkids.kz/api/payments/payment-confirmation/"
+    post_link = f"https://api.protosedu.kz/api/payments/payment-confirmation/"
+    failure_post_link = f"https://api.protosedu.kz/api/payments/payment-confirmation/"
     payment_data = {
         "grant_type": "client_credentials",
         "scope": "webapi usermanagement email_send verification statement statistics payment",
@@ -136,7 +136,6 @@ def initiate_payment(request):
         return Response({"payment": payment_serializer.data, "token": token_json})
 
     else:
-        print(response.text)
         return Response(
             {"error": "Failed to initiate payment", "details": response.text},
             status=status.HTTP_400_BAD_REQUEST,
