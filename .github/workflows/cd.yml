@@ -1,0 +1,22 @@
+name: Deploy with Docker Compose
+
+on:
+  push:
+    branches: [ test-github-actions ]  # Runs only on this branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Connect to VPS and restart Docker containers
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.PRIVATE_KEY }}
+          port: 22
+          script: |
+            cd /home/protosedu/protosedu-prod/protosedu-backend
+            docker compose down
+            docker compose up --build -d
