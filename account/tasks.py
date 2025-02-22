@@ -98,26 +98,27 @@ def send_mass_activation_email(user_ids):
     datatuple = []
 
     for user in users:
-        password = generate_password()
-        user.set_password(password)
-        user.activation_token = uuid.uuid4()
-        user.activation_token_expires_at = timezone.now() + timedelta(days=1)
-        user.save()
-        activation_url = f"{frontend_url}activate/{user.activation_token}/"
-        context = {"user": user, "activation_url": activation_url, "password": password}
-        subject = "Activate your Vunderkids Account"
-        html_message = render_to_string("activation_email.html", context)
-        plain_message = strip_tags(html_message)
-        msg = (
-            subject,
-            plain_message,
-            html_message,
-            settings.DEFAULT_FROM_EMAIL,
-            [user.email],
-        )
-        datatuple.append(msg)
+        print(user)
+    #     password = generate_password()
+    #     user.set_password(password)
+    #     user.activation_token = uuid.uuid4()
+    #     user.activation_token_expires_at = timezone.now() + timedelta(days=1)
+    #     user.save()
+    #     activation_url = f"{frontend_url}activate/{user.activation_token}/"
+    #     context = {"user": user, "activation_url": activation_url, "password": password}
+    #     subject = "Activate your Vunderkids Account"
+    #     html_message = render_to_string("activation_email.html", context)
+    #     plain_message = strip_tags(html_message)
+    #     msg = (
+    #         subject,
+    #         plain_message,
+    #         html_message,
+    #         settings.DEFAULT_FROM_EMAIL,
+    #         [user.email],
+    #     )
+    #     datatuple.append(msg)
 
-    send_mass_html_mail(datatuple, fail_silently=False)
+    # send_mass_html_mail(datatuple, fail_silently=False)
 
 
 @shared_task

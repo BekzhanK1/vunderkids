@@ -17,6 +17,8 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - vunderkids_net
+    ports:
+      - "5432:5432"
 
   web:
     build: .

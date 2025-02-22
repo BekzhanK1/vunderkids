@@ -246,104 +246,137 @@ class SchoolViewSet(viewsets.ModelViewSet):
     )
     def upload_excel(self, request):
         file = request.FILES.get("file")
+        school_id = request.query_params.get("school_id")
         if not file:
             return Response(
                 {"message": "No file was uploaded"}, status=status.HTTP_400_BAD_REQUEST
             )
 
-        self.process_excel(file)
-        return Response(
-            {"message": "Excel file has been processed successfully"},
-            status=status.HTTP_200_OK,
-        )
+        return self.parse_excel(file, school_id)
 
-    def process_excel(self, excel_file):
-        df = pd.read_excel(excel_file, engine="openpyxl")
-        school_name = df.iloc[0]["School Name"]
-        city = df.iloc[0]["City"]
-        school_email = df.iloc[0]["Email"]
+    def parse_excel(self, file, school_id):
+        """
+        Parses the uploaded Excel file, extracts student data,
+        and checks for duplicate emails before processing further.
+        """
+        try:
+            xls = pd.ExcelFile(file)
+        except Exception as e:
+            return Response(
+                {"message": f"Invalid Excel file format: {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-        school, created = School.objects.get_or_create(
-            name=school_name, defaults={"city": city, "email": school_email}
-        )
+        names_to_drop = ["Оқушының аты-жөні"]
+        all_students = []
+        email_to_students = {}
+        duplicate_emails = {}
 
-        # Extract the supervisor information
-        supervisor_first_name = df.iloc[2]["School Name"]
-        supervisor_last_name = df.iloc[2]["City"]
-        supervisor_email = df.iloc[2]["Email"]
-        supervisor_phone = df.iloc[2]["Unnamed: 3"]
+        def load_clean_sheet(sheet_name):
+            df = pd.read_excel(xls, sheet_name=sheet_name, skiprows=1)
 
-        supervisor, created = User.objects.get_or_create(
-            email=supervisor_email,
-            defaults={
-                "first_name": supervisor_first_name,
-                "last_name": supervisor_last_name,
-                "role": "supervisor",
-                "is_active": False,
-                "phone_number": supervisor_phone if pd.notna(supervisor_phone) else "",
-            },
-        )
-        if created:
-            supervisor.activation_token = uuid.uuid4()
-            password = generate_password()
-            supervisor.set_password(password)
-            supervisor.save()
-            send_activation_email.delay(supervisor.pk, password)
+            # Rename columns
+            df.columns = [
+                "№",
+                "Оқушының аты-жөні",
+                "Параллель",
+                "Литер",
+                "Ата-анасының электронды почтасы",
+            ]
+            df[["Жөні", "Аты"]] = df["Оқушының аты-жөні"].str.split(n=2, expand=True)[
+                [0, 1]
+            ]
+            df = df.drop(columns=["№"])
+            df = df.dropna(subset=["Оқушының аты-жөні"])
+            df = df.dropna(subset=["Параллель"])
+            df = df.dropna(subset=["Литер"])
+            df = df.dropna(subset=["Ата-анасының электронды почтасы"])
+            df = df[~df["Оқушының аты-жөні"].isin(names_to_drop)]
+            df = df.drop(columns=["Оқушының аты-жөні"])
 
-        school.supervisor = supervisor
-        school.save()
+            # Convert to a list of dictionaries
+            students = [
+                {
+                    "first_name": row["Аты"],
+                    "last_name": row["Жөні"],
+                    "grade": row["Параллель"],
+                    "section": row["Литер"],
+                    "email": row["Ата-анасының электронды почтасы"],
+                }
+                for _, row in df.iterrows()
+            ]
 
-        # Extract the class and student information
-        df_students = pd.read_excel(excel_file, engine="openpyxl", skiprows=4)
+            return students
+
+        # Process all sheets in the Excel file
+        for sheet in xls.sheet_names:
+            sheet_students = load_clean_sheet(sheet)
+            all_students.extend(sheet_students)
+
+        print(all_students)
+
+        # Check for duplicate emails
+        for student in all_students:
+            email = student["email"]
+            if email in email_to_students:
+                if email not in duplicate_emails:
+                    duplicate_emails[email] = [email_to_students[email]]
+                duplicate_emails[email].append(student)
+            else:
+                email_to_students[email] = student
+
+        if duplicate_emails:
+            return Response(
+                {
+                    "message": "Duplicate emails found",
+                    "num_duplicates": len(duplicate_emails),
+                    "duplicate_emails": duplicate_emails,
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         new_user_ids = []
-        for idx, row in df_students.iterrows():
-            if pd.notna(row["Class"]):
-                class_info = row["Class"]
-                grade = int("".join(filter(str.isdigit, class_info)))
-                section = "".join(filter(str.isalpha, class_info))
-                language = row["Language"]
+        for student in all_students:
+            user, created = User.objects.get_or_create(
+                email=student["email"],
+                defaults={
+                    "first_name": student["first_name"],
+                    "last_name": student["last_name"],
+                    "role": "student",
+                    "is_active": False,
+                },
+            )
+            if created:
+                user.activation_token = uuid.uuid4()
+                user.save()
+                new_user_ids.append(user.pk)
 
-                school_class, created = Class.objects.get_or_create(
-                    school=school,
-                    grade=grade,
-                    section=section,
-                    defaults={"language": language},
-                )
-
-            if pd.notna(row["Student Firstname"]):
-                student_first_name = row["Student Firstname"]
-                student_last_name = row["Student Lastname"]
-                student_email = row["Email"]
-                student_phone = row["Phone(optional)"]
-                birth_date = row["Birthdate"]
-
-                user, created = User.objects.get_or_create(
-                    email=student_email,
-                    defaults={
-                        "first_name": student_first_name,
-                        "last_name": student_last_name,
-                        "role": "student",
-                        "is_active": False,
-                        "phone_number": (
-                            student_phone if pd.notna(student_phone) else ""
-                        ),
-                    },
-                )
-                if created:
-                    user.activation_token = uuid.uuid4()
-                    user.save()
-                    new_user_ids.append(user.pk)
-
-                Student.objects.get_or_create(
-                    user=user,
-                    school_class=school_class,
-                    school=school,
-                    grade=grade,
-                    defaults={"language": language, "birth_date": birth_date},
-                )
+            school = School.objects.get(pk=school_id)
+            grade = int(student["grade"])
+            section = student["section"]
+            school_class, created = Class.objects.get_or_create(
+                school=school,
+                grade=grade,
+                section=section,
+            )
+            Student.objects.get_or_create(
+                user=user,
+                school_class=school_class,
+                school=school,
+                grade=grade,
+            )
 
         if new_user_ids:
             send_mass_activation_email.delay(new_user_ids)
+
+        return Response(
+            {
+                "message": "Excel file processed successfully",
+                "num_students": len(all_students),
+                "students": all_students,
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 class SupervisorSchoolViewset(viewsets.ReadOnlyModelViewSet):

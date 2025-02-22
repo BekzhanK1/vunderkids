@@ -10,7 +10,12 @@ from django.core.validators import RegexValidator
 from django.conf import settings
 
 GRADE_CHOICES = [(i, str(i)) for i in range(0, 5)]
-SECTION_CHOICES = [(chr(i), chr(i)) for i in range(ord("А"), ord("Я") + 1)]
+SECTION_CHOICES = (
+    [(chr(i), chr(i)) for i in range(ord("A"), ord("Z") + 1)]
+    + [(chr(i), chr(i)) for i in range(ord("А"), ord("Я") + 1)]
+    + [(chr(i), chr(i)) for i in range(ord("Ә"), ord("Ө") + 1)]
+    + [(chr(i), chr(i)) for i in range(ord("Ү"), ord("Я") + 1)]
+)
 GENDER_CHOICES = [
     ("M", "Male"),
     ("F", "Female"),
@@ -137,7 +142,7 @@ class Class(models.Model):
     school = models.ForeignKey(School, on_delete=models.CASCADE, related_name="classes")
     grade = models.IntegerField(choices=GRADE_CHOICES)
     section = models.CharField(max_length=1, choices=SECTION_CHOICES)
-    language = models.CharField(max_length=50, choices=LANGUAGE_CHOICES, default="ru")
+    language = models.CharField(max_length=50, choices=LANGUAGE_CHOICES, default="kz")
 
     def __str__(self):
         return f"{self.grade}{self.section}"
@@ -169,7 +174,7 @@ class Student(models.Model):
     cups = models.PositiveIntegerField(default=0)
     stars = models.PositiveIntegerField(default=0)
     gender = models.CharField(max_length=1, choices=GENDER_CHOICES, default="O")
-    language = models.CharField(max_length=50, choices=LANGUAGE_CHOICES, default="ru")
+    language = models.CharField(max_length=50, choices=LANGUAGE_CHOICES, default="kz")
     avatar = models.ImageField(upload_to="avatars/", null=True, blank=True)
     birth_date = models.DateField(default=date(2015, 1, 1), blank=True, null=True)
     last_task_completed_at = models.DateTimeField(null=True, blank=True)
