@@ -29,16 +29,17 @@ LANGUAGE_CHOICES = [
 
 
 class CustomUserManager(BaseUserManager):
-    def create_user(self, email, password=None, **extra_fields):
-        if not email:
-            raise ValueError("The Email field must be set")
-        email = self.normalize_email(email)
-        user = self.model(email=email, **extra_fields)
+    def create_user(self, username, email=None, password=None, **extra_fields):
+        if not username:
+            raise ValueError("The Username field must be set")
+
+        email = self.normalize_email(email) if email else None  # Ensure it's nullable
+        user = self.model(username=username, email=email, **extra_fields)
         user.set_password(password)
         user.save(using=self._db)
         return user
 
-    def create_superuser(self, email, password=None, **extra_fields):
+    def create_superuser(self, username, email=None, password=None, **extra_fields):
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
         extra_fields.setdefault("is_active", True)
@@ -48,7 +49,9 @@ class CustomUserManager(BaseUserManager):
         if extra_fields.get("is_superuser") is not True:
             raise ValueError("Superuser must have is_superuser=True.")
 
-        return self.create_user(email, password, **extra_fields)
+        return self.create_user(
+            username=username, email=email, password=password, **extra_fields
+        )
 
 
 class User(AbstractBaseUser, PermissionsMixin):
@@ -58,8 +61,8 @@ class User(AbstractBaseUser, PermissionsMixin):
         ("teacher", "Teacher"),
         ("supervisor", "Supervisor"),
     )
-
-    email = models.EmailField(unique=True, db_index=True)
+    username = models.CharField(max_length=150, blank=True, null=True, unique=True)
+    email = models.EmailField(db_index=True, blank=True, null=True)
     first_name = models.CharField(max_length=30)
     last_name = models.CharField(max_length=150)
     phone_regex = RegexValidator(
@@ -78,7 +81,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     reset_password_token = models.UUIDField(editable=False, null=True, blank=True)
     reset_password_token_expires_at = models.DateTimeField(null=True, blank=True)
 
-    USERNAME_FIELD = "email"
+    USERNAME_FIELD = "username"
     REQUIRED_FIELDS = []
 
     objects = CustomUserManager()
@@ -123,7 +126,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         return f"{self.first_name} {self.last_name}".strip()
 
     def __str__(self):
-        return f"{self.email} - {self.get_role_display()}"
+        return f"{self.username} - {self.get_role_display()}"
 
 
 class School(models.Model):

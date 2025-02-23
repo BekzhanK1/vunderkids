@@ -3,7 +3,6 @@
 from pathlib import Path
 import os
 from dotenv import load_dotenv
-from google.oauth2 import service_account
 
 load_dotenv(override=True)
 
@@ -136,8 +135,8 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 AUTHENTICATION_BACKENDS = [
+    "account.backends.UsernameBackend",
     "django.contrib.auth.backends.ModelBackend",
-    "account.backends.EmailBackend",
 ]
 
 AWS_ACCESS_KEY_ID = os.getenv("YANDEX_ACCESS_KEY_ID")

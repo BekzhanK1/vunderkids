@@ -23,11 +23,12 @@ class UserSerializer(serializers.ModelSerializer):
 class StaffRegistrationSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ("email", "phone_number", "first_name", "last_name")
+        fields = ("username", "email", "phone_number", "first_name", "last_name")
         extra_kwargs = {"password": {"write_only": True}}
 
     def create(self, validated_data):
         user = User.objects.create_user(
+            username=validated_data["username"],
             email=validated_data["email"],
             phone_number=validated_data.get("phone_number", ""),
             first_name=validated_data["first_name"],
@@ -42,6 +43,7 @@ class StaffRegistrationSerializer(serializers.ModelSerializer):
 
 
 class SupervisorRegistrationSerializer(serializers.ModelSerializer):
+    username = serializers.CharField()
     email = serializers.EmailField()
     first_name = serializers.CharField()
     last_name = serializers.CharField()
@@ -61,9 +63,17 @@ class SupervisorRegistrationSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("A user with that email already exists.")
         return value
 
+    def validate_username(self, value):
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError(
+                "A user with that username already exists."
+            )
+        return value
+
     def create(self, validated_data):
         password = generate_password()
         user = User.objects.create_user(
+            username=validated_data["username"],
             email=validated_data["email"],
             phone_number=validated_data.get("phone_number", ""),
             first_name=validated_data["first_name"],
@@ -80,6 +90,7 @@ class SupervisorRegistrationSerializer(serializers.ModelSerializer):
 
 
 class ParentRegistrationSerializer(serializers.ModelSerializer):
+    username = serializers.CharField()
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True)
     first_name = serializers.CharField()
@@ -88,7 +99,21 @@ class ParentRegistrationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Parent
-        fields = ["email", "password", "first_name", "last_name", "phone_number"]
+        fields = [
+            "username",
+            "email",
+            "password",
+            "first_name",
+            "last_name",
+            "phone_number",
+        ]
+
+    def validate_username(self, value):
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError(
+                "A user with that username already exists."
+            )
+        return value
 
     def validate_email(self, value):
         try:
@@ -101,8 +126,8 @@ class ParentRegistrationSerializer(serializers.ModelSerializer):
         return value
 
     def create(self, validated_data):
-        # Create user
         user_data = {
+            "username": validated_data.pop("username"),
             "email": validated_data.pop("email"),
             "first_name": validated_data.pop("first_name"),
             "last_name": validated_data.pop("last_name"),
@@ -140,6 +165,7 @@ class SchoolSerializer(serializers.ModelSerializer):
 
 
 class StudentRegistrationSerializer(serializers.ModelSerializer):
+    username = serializers.CharField()
     email = serializers.EmailField(max_length=255)
     first_name = serializers.CharField(max_length=30)
     last_name = serializers.CharField(max_length=150)
@@ -168,14 +194,19 @@ class StudentRegistrationSerializer(serializers.ModelSerializer):
             "gender",
         )
 
+    def validate_username(self, value):
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError(
+                "A user with that username already exists."
+            )
+        return value
+
     def validate_email(self, value):
         try:
             validate_email(value)
         except DjangoValidationError:
             raise serializers.ValidationError("Invalid email format.")
 
-        if User.objects.filter(email=value).exists():
-            raise serializers.ValidationError("A user with that email already exists.")
         return value
 
     def create(self, validated_data):
@@ -186,7 +217,7 @@ class StudentRegistrationSerializer(serializers.ModelSerializer):
         # Create user
         user_data = {
             key: validated_data.pop(key)
-            for key in ["email", "first_name", "last_name", "phone_number"]
+            for key in ["username", "email", "first_name", "last_name", "phone_number"]
         }
         user = User.objects.create_user(**user_data, role="student")
         password = generate_password()
@@ -232,6 +263,7 @@ class StudentsListSerializer(serializers.ModelSerializer):
         model = Student
         fields = [
             "id",
+            "username",
             "first_name",
             "last_name",
             "email",
@@ -272,6 +304,7 @@ class SimpleStudentSerializer(serializers.ModelSerializer):
         model = Student
         fields = [
             "id",
+            "username",
             "first_name",
             "last_name",
             "email",
@@ -349,6 +382,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
                 avatar_url = student.avatar.url if student.avatar else None
                 data["user"] = {
                     "id": self.user.id,
+                    "username": self.user.username,
                     "email": self.user.email,
                     "first_name": self.user.first_name,
                     "last_name": self.user.last_name,
@@ -369,6 +403,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
                 children = Child.objects.filter(parent=parent)
                 data["user"] = {
                     "id": self.user.id,
+                    "username": self.user.username,
                     "email": self.user.email,
                     "first_name": self.user.first_name,
                     "last_name": self.user.last_name,
@@ -380,6 +415,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
             elif self.user.is_superuser:
                 data["user"] = {
                     "id": self.user.id,
+                    "username": self.user.username,
                     "email": self.user.email,
                     "first_name": self.user.first_name,
                     "last_name": self.user.last_name,
@@ -390,6 +426,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
             elif self.user.is_supervisor:
                 data["user"] = {
                     "id": self.user.id,
+                    "username": self.user.username,
                     "email": self.user.email,
                     "first_name": self.user.first_name,
                     "last_name": self.user.last_name,

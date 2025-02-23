@@ -107,9 +107,10 @@ class RequestResetPassword(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
+        username = request.data.get("username")
         email = request.data.get("email")
-        if email:
-            user = get_object_or_404(User, email=email)
+        if email and username:
+            user = get_object_or_404(User, email=email, username=username)
             user.reset_password_token = uuid.uuid4()
             user.reset_password_token_expires_at = timezone.now() + timedelta(days=1)
             user.save()
@@ -120,7 +121,9 @@ class RequestResetPassword(APIView):
             )
         else:
             return Response(
-                {"message": "You need to enter the email to reset the password"},
+                {
+                    "message": "You need to enter the email and username to reset the password"
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -850,6 +853,7 @@ class CurrentUserView(APIView):
         tasks_completed = user.completed_tasks.count()
         return {
             "id": user.id,
+            "username": user.username,
             "email": user.email,
             "first_name": user.first_name,
             "last_name": user.last_name,
@@ -873,6 +877,7 @@ class CurrentUserView(APIView):
         children = Child.objects.filter(parent=parent)
         return {
             "id": user.id,
+            "username": user.username,
             "email": user.email,
             "first_name": user.first_name,
             "last_name": user.last_name,
@@ -887,6 +892,7 @@ class CurrentUserView(APIView):
     def _get_supervisor_data(self, user):
         return {
             "id": user.id,
+            "username": user.username,
             "email": user.email,
             "first_name": user.first_name,
             "last_name": user.last_name,
@@ -898,6 +904,7 @@ class CurrentUserView(APIView):
     def _get_superadmin_data(self, user):
         return {
             "id": user.id,
+            "username": user.username,
             "email": user.email,
             "first_name": user.first_name,
             "last_name": user.last_name,
