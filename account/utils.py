@@ -1,5 +1,7 @@
 import secrets
 
+import re
+
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 
@@ -41,3 +43,98 @@ def get_presigned_url(bucket_name, key, expiration=3600):
     except Exception as e:
         print(f"An error occurred: {e}")
         return None
+
+
+def cyrillic_to_username(text):
+    translit_map = {
+        "А": "A",
+        "Ә": "A",
+        "Б": "B",
+        "В": "V",
+        "Г": "G",
+        "Ғ": "G",
+        "Д": "D",
+        "Е": "E",
+        "Ё": "Yo",
+        "Ж": "Zh",
+        "З": "Z",
+        "И": "I",
+        "Й": "Y",
+        "К": "K",
+        "Қ": "Q",
+        "Л": "L",
+        "М": "M",
+        "Н": "N",
+        "Ң": "N",
+        "О": "O",
+        "Ө": "O",
+        "П": "P",
+        "Р": "R",
+        "С": "S",
+        "Т": "T",
+        "У": "U",
+        "Ұ": "U",
+        "Ү": "U",
+        "Ф": "F",
+        "Х": "Kh",
+        "Һ": "H",
+        "Ц": "Ts",
+        "Ч": "Ch",
+        "Ш": "Sh",
+        "Щ": "Shch",
+        "Ъ": "",
+        "Ы": "Y",
+        "І": "I",
+        "Ь": "",
+        "Э": "E",
+        "Ю": "Yu",
+        "Я": "Ya",
+        "а": "a",
+        "ә": "a",
+        "б": "b",
+        "в": "v",
+        "г": "g",
+        "ғ": "g",
+        "д": "d",
+        "е": "e",
+        "ё": "yo",
+        "ж": "zh",
+        "з": "z",
+        "и": "i",
+        "й": "y",
+        "к": "k",
+        "қ": "q",
+        "л": "l",
+        "м": "m",
+        "н": "n",
+        "ң": "n",
+        "о": "o",
+        "ө": "o",
+        "п": "p",
+        "р": "r",
+        "с": "s",
+        "т": "t",
+        "у": "u",
+        "ұ": "u",
+        "ү": "u",
+        "ф": "f",
+        "х": "kh",
+        "һ": "h",
+        "ц": "ts",
+        "ч": "ch",
+        "ш": "sh",
+        "щ": "shch",
+        "ъ": "",
+        "ы": "y",
+        "і": "i",
+        "ь": "",
+        "э": "e",
+        "ю": "yu",
+        "я": "ya",
+    }
+
+    latin_text = "".join(translit_map.get(char, char) for char in text)
+
+    latin_text = re.sub(r"[^a-zA-Z0-9_]", ".", latin_text)
+
+    return latin_text.lower()

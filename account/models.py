@@ -1,8 +1,11 @@
 from datetime import date, timedelta
 
 from django.conf import settings
-from django.contrib.auth.models import (AbstractBaseUser, BaseUserManager,
-                                        PermissionsMixin)
+from django.contrib.auth.models import (
+    AbstractBaseUser,
+    BaseUserManager,
+    PermissionsMixin,
+)
 from django.core.validators import RegexValidator
 from django.db import models
 from django.utils import timezone
@@ -164,7 +167,7 @@ class Student(models.Model):
     )
     school = models.ForeignKey(
         School,
-        on_delete=models.SET_NULL,
+        on_delete=models.CASCADE,
         null=True,
         blank=True,
         related_name="students",

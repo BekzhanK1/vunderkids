@@ -9,7 +9,7 @@ from django.utils import timezone
 from django.utils.html import strip_tags
 
 from account.models import Parent, Student, User
-from account.utils import render_email
+from account.utils import generate_password, render_email
 from subscription.models import Subscription
 
 frontend_url = settings.FRONTEND_URL
@@ -99,12 +99,14 @@ def send_mass_activation_email(user_ids):
     datatuple = []
 
     for user in users:
+        password = generate_password()
+        user.set_password(password)
+        user.activation_token = uuid.uuid4()
+        user.activation_token_expires_at = timezone.now() + timedelta(days=1)
+        user.save()
         print(user)
-    #     password = generate_password()
-    #     user.set_password(password)
-    #     user.activation_token = uuid.uuid4()
-    #     user.activation_token_expires_at = timezone.now() + timedelta(days=1)
-    #     user.save()
+        print(password)
+
     #     activation_url = f"{frontend_url}activate/{user.activation_token}/"
     #     context = {"user": user, "activation_url": activation_url, "password": password}
     #     subject = "Activate your Vunderkids Account"

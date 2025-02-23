@@ -7,10 +7,10 @@ from rest_framework.response import Response
 
 from account.models import Class, School, Student, User
 from account.permissions import IsSuperUser
-from account.serializers import (SchoolSerializer,
-                                 SupervisorRegistrationSerializer)
+from account.serializers import SchoolSerializer, SupervisorRegistrationSerializer
 
 from ..tasks import send_mass_activation_email
+from ..utils import cyrillic_to_username
 
 
 class SchoolViewSet(viewsets.ModelViewSet):
@@ -145,28 +145,32 @@ class SchoolViewSet(viewsets.ModelViewSet):
         print(all_students)
 
         # Check for duplicate emails
-        for student in all_students:
-            email = student["email"]
-            if email in email_to_students:
-                if email not in duplicate_emails:
-                    duplicate_emails[email] = [email_to_students[email]]
-                duplicate_emails[email].append(student)
-            else:
-                email_to_students[email] = student
+        # for student in all_students:
+        #     email = student["email"]
+        #     if email in email_to_students:
+        #         if email not in duplicate_emails:
+        #             duplicate_emails[email] = [email_to_students[email]]
+        #         duplicate_emails[email].append(student)
+        #     else:
+        #         email_to_students[email] = student
 
-        if duplicate_emails:
-            return Response(
-                {
-                    "message": "Duplicate emails found",
-                    "num_duplicates": len(duplicate_emails),
-                    "duplicate_emails": duplicate_emails,
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        # if duplicate_emails:
+        #     return Response(
+        #         {
+        #             "message": "Duplicate emails found",
+        #             "num_duplicates": len(duplicate_emails),
+        #             "duplicate_emails": duplicate_emails,
+        #         },
+        #         status=status.HTTP_400_BAD_REQUEST,
+        #     )
 
         new_user_ids = []
         for student in all_students:
+            username = cyrillic_to_username(
+                student["first_name"] + " " + student["last_name"]
+            )
             user, created = User.objects.get_or_create(
+                username=username,
                 email=student["email"],
                 defaults={
                     "first_name": student["first_name"],
