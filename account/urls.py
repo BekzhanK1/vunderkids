@@ -1,8 +1,9 @@
-from django.urls import path, include
-from rest_framework_simplejwt.views import TokenRefreshView
+from django.urls import include, path
 from rest_framework.routers import DefaultRouter, SimpleRouter
 from rest_framework_nested import routers
-from .views import *
+from rest_framework_simplejwt.views import TokenRefreshView
+
+from account.views import *
 
 children_router = SimpleRouter()
 children_router.register(r"children", ChildrenViewSet, basename="children")

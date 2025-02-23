@@ -1,11 +1,8 @@
-from django.urls import path, include
+from django.urls import include, path
 from rest_framework.routers import DefaultRouter
-from .views import (
-    PlanViewSet,
-    SubscriptionViewSet,
-    initiate_payment,
-    payment_confirmation,
-)
+
+from .views import (PlanViewSet, SubscriptionViewSet, initiate_payment,
+                    payment_confirmation)
 
 router = DefaultRouter()
 router.register(r"plans", PlanViewSet, basename="plan")

@@ -1,6 +1,7 @@
-from django.db import models
 from django.contrib.auth import get_user_model
-from account.models import Child, LANGUAGE_CHOICES, GRADE_CHOICES
+from django.db import models
+
+from account.models import GRADE_CHOICES, LANGUAGE_CHOICES, Child
 
 User = get_user_model()
 

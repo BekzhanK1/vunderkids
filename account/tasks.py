@@ -1,15 +1,16 @@
+import uuid
+from datetime import timedelta
+
 from celery import shared_task
+from django.conf import settings
 from django.core.mail import EmailMultiAlternatives, get_connection
 from django.template.loader import render_to_string
+from django.utils import timezone
 from django.utils.html import strip_tags
-from django.conf import settings
-from django.utils import timezone
-from account.models import Child, Student, Parent, User
+
+from account.models import Parent, Student, User
+from account.utils import render_email
 from subscription.models import Subscription
-from account.utils import generate_password, render_email
-from django.utils import timezone
-from datetime import timedelta, time
-import uuid
 
 frontend_url = settings.FRONTEND_URL
 

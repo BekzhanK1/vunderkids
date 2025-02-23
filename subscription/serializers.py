@@ -1,6 +1,7 @@
-from rest_framework import serializers
-from .models import Payment, Plan, Subscription, DURATION_CHOICES
 from django.contrib.auth.models import AnonymousUser
+from rest_framework import serializers
+
+from .models import DURATION_CHOICES, Payment, Plan, Subscription
 
 
 class PlanSerializer(serializers.ModelSerializer):

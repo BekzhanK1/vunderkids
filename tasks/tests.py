@@ -1,9 +1,11 @@
-from django.test import TestCase
 from django.contrib.auth import get_user_model
-from rest_framework.test import APIClient
+from django.test import TestCase
 from rest_framework import status
-from .models import Course, Section, Content, Task, Question, Answer, TaskCompletion, Image
+from rest_framework.test import APIClient
+
 from account.models import Child, Student
+
+from .models import Content, Course, Question, Section, Task
 
 User = get_user_model()
 

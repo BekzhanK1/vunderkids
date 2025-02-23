@@ -1,10 +1,7 @@
+import secrets
+
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
-import secrets
-import pandas as pd
-
-
-from account.models import Student
 
 
 def render_email(first_name, last_name, current_cups, level):

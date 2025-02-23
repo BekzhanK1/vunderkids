@@ -1,11 +1,10 @@
-from django.shortcuts import get_object_or_404, render
-from rest_framework import viewsets, status
+from django.shortcuts import get_object_or_404
+from rest_framework import status, viewsets
+from rest_framework.response import Response
 
 from account.models import Child, Student
 from account.permissions import IsSuperUserOrStaffOrReadOnly
 from olympiad.models import Olympiad
-from rest_framework.response import Response
-
 from olympiad.serializers import OlympiadSerializer
 
 

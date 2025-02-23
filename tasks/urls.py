@@ -1,15 +1,9 @@
 from django.urls import path
 from rest_framework_nested import routers
-from .views import (
-    ChapterViewSet,
-    CourseViewSet,
-    PlayGameView,
-    SectionViewSet,
-    LessonViewSet,
-    ContentViewSet,
-    TaskViewSet,
-    QuestionViewSet,
-)
+
+from .views import (ChapterViewSet, ContentViewSet, CourseViewSet,
+                    LessonViewSet, PlayGameView, QuestionViewSet,
+                    SectionViewSet, TaskViewSet)
 
 router = routers.DefaultRouter()
 router.register(r"courses", CourseViewSet)

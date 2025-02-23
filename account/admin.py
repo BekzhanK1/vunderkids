@@ -1,5 +1,7 @@
 from django.contrib import admin
-from .models import User, Child, Parent, School, Student, Class, LevelRequirement
+
+from .models import (Child, Class, LevelRequirement, Parent, School, Student,
+                     User)
 
 
 # Register User model with customizations

@@ -1,13 +1,11 @@
 from datetime import date, timedelta
-from django.utils import timezone
-from django.db import models
-from django.contrib.auth.models import (
-    AbstractBaseUser,
-    BaseUserManager,
-    PermissionsMixin,
-)
-from django.core.validators import RegexValidator
+
 from django.conf import settings
+from django.contrib.auth.models import (AbstractBaseUser, BaseUserManager,
+                                        PermissionsMixin)
+from django.core.validators import RegexValidator
+from django.db import models
+from django.utils import timezone
 
 GRADE_CHOICES = [(i, str(i)) for i in range(0, 5)]
 SECTION_CHOICES = (

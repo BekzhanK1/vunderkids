@@ -1,8 +1,10 @@
-from django.db import models
 from datetime import timedelta
-from django.utils import timezone
-from account.models import User
+
 from django.core.validators import MaxValueValidator, MinValueValidator
+from django.db import models
+from django.utils import timezone
+
+from account.models import User
 
 DURATION_CHOICES = [
     ("free-trial", "Free Trial"),

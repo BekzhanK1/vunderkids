@@ -1,15 +1,14 @@
-from django.conf import settings
-from rest_framework import serializers
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from django.core.validators import validate_email
-from django.core.exceptions import ValidationError as DjangoValidationError
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
-from account.models import *
-from subscription.models import Subscription, Plan
-from .tasks import send_activation_email
-from .utils import generate_password, get_presigned_url
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.core.validators import validate_email
+from rest_framework import serializers
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
+from account.models import *
+
+from .tasks import send_activation_email
+from .utils import generate_password
 
 User = get_user_model()
 

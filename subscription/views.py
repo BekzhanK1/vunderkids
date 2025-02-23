@@ -1,23 +1,20 @@
-import json
-from django.shortcuts import get_object_or_404
 import requests
-from rest_framework import viewsets, status
-from rest_framework.response import Response
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.exceptions import PermissionDenied
-from account.permissions import IsParent, IsStudent, IsSuperUser
-from .models import Payment, Plan, Subscription
-from .utils import generate_invoice_id
 from django.conf import settings
+from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
-from .serializers import (
-    PaymentSerializer,
-    PlanSerializer,
-    SubscriptionModelSerializer,
-    SubscriptionCreateSerializer,
-)
+from rest_framework import status, viewsets
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.exceptions import PermissionDenied
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+
+from account.permissions import IsParent, IsStudent, IsSuperUser
+
+from .models import Payment, Plan, Subscription
+from .serializers import (PaymentSerializer, PlanSerializer,
+                          SubscriptionCreateSerializer,
+                          SubscriptionModelSerializer)
+from .utils import generate_invoice_id
 
 TERMINAL_ID = settings.HALYK_TERMINAL_ID
 CLIENT_ID = settings.HALYK_CLIENT_ID

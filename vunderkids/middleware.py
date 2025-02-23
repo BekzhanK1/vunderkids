@@ -1,6 +1,8 @@
 # middleware.py
 import time
+
 from django.http import HttpResponse
+
 
 class RateLimitMiddleware:
     def __init__(self, get_response):

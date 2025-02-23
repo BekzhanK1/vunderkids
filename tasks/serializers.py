@@ -1,18 +1,10 @@
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
-from .models import (
-    Chapter,
-    Course,
-    Image,
-    Section,
-    Lesson,
-    Content,
-    Task,
-    Question,
-    TaskCompletion,
-    Answer,
-)
+
 from account.models import Child
+
+from .models import (Answer, Chapter, Content, Course, Image, Lesson, Question,
+                     Section, Task, TaskCompletion)
 
 
 class AnswerSerializer(serializers.Serializer):

@@ -1,15 +1,7 @@
 from django.contrib import admin
-from .models import (
-    Course,
-    Section,
-    Chapter,
-    Lesson,
-    Content,
-    Task,
-    Question,
-    Answer,
-    TaskCompletion,
-)
+
+from .models import (Answer, Chapter, Content, Course, Lesson, Question,
+                     Section, Task, TaskCompletion)
 
 
 # Register Course model with customizations
