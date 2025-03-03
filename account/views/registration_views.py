@@ -31,6 +31,7 @@ class ParentRegistrationAPIView(APIView):
         data = request.data
         print(data)
         serializer = ParentRegistrationSerializer(data=data)
+        print(serializer.is_valid())
         if serializer.is_valid():
             parent = serializer.save()
             return Response(

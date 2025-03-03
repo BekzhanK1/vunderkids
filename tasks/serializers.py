@@ -42,7 +42,7 @@ class QuestionSerializer(serializers.ModelSerializer):
     is_attempted = serializers.SerializerMethodField()
     is_correct = serializers.SerializerMethodField()
     images = ImageSerializer(many=True, read_only=True)
-
+    
     class Meta:
         model = Question
         fields = "__all__"

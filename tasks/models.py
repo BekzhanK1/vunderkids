@@ -116,6 +116,7 @@ class Question(models.Model):
     correct_answer = models.JSONField()
     template = models.CharField(default="1", max_length=20, blank=True, null=True)
     audio = models.FileField(upload_to="audio/", blank=True, null=True)
+    content = models.JSONField(blank=True, null=True)
 
     def __str__(self):
         return f"[Task: {self.task}] {self.question_text}"

@@ -138,7 +138,7 @@ class ParentRegistrationSerializer(serializers.ModelSerializer):
         password = validated_data.pop("password")
         user.set_password(password)
         user.save()
-        send_activation_email.delay(user.id, password)
+        # send_activation_email.delay(user.id, password)
 
         # Create parent profile
         parent = Parent.objects.create(user=user, **validated_data)
@@ -367,13 +367,16 @@ class ChildSerializer(serializers.ModelSerializer):
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user):
+        print(user)
         token = super().get_token(user)
         # Add any additional token customization here if needed
         return token
 
     def validate(self, attrs):
+        print(attrs)
         data = super().validate(attrs)
-
+        print(data)
+        
         try:
             if self.user.is_student:
                 student = Student.objects.get(user=self.user)
@@ -434,6 +437,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
                     "is_staff": self.user.is_staff,
                 }
         except ObjectDoesNotExist as e:
+            print(e)
             raise serializers.ValidationError(
                 "User data could not be retrieved."
             )  # Customize error message as needed
