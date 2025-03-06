@@ -6,9 +6,19 @@ from account.models import GRADE_CHOICES, LANGUAGE_CHOICES, Child
 User = get_user_model()
 
 
+COURSE_TYPES = [
+    ("regular", "Regular"),
+    # ("modo", "MODO"),
+    # ("ent", "ENT"),
+]
+
+
 class Course(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
+    course_type = models.CharField(
+        max_length=50, choices=COURSE_TYPES, default="regular"
+    )
     grade = models.IntegerField(choices=GRADE_CHOICES)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
     language = models.CharField(max_length=50, choices=LANGUAGE_CHOICES, default="ru")

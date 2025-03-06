@@ -16,6 +16,8 @@ EXPOSE 8000
 
 COPY entrypoint.sh /entrypoint.sh
 
+RUN rm -f /django/celerybeat-schedule
+
 RUN chmod +x /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
 

@@ -8,12 +8,27 @@ from rest_framework.views import APIView
 from account.models import Child, Student
 from account.permissions import HasSubscription, IsSuperUserOrStaffOrReadOnly
 
-from .models import (Answer, Chapter, Content, Course, Lesson, Question,
-                     Section, Task, TaskCompletion)
-from .serializers import (ChapterSerializer, ContentSerializer,
-                          CourseSerializer, LessonSerializer,
-                          QuestionSerializer, SectionSerializer,
-                          TaskSerializer, TaskSummarySerializer)
+from .models import (
+    Answer,
+    Chapter,
+    Content,
+    Course,
+    Lesson,
+    Question,
+    Section,
+    Task,
+    TaskCompletion,
+)
+from .serializers import (
+    ChapterSerializer,
+    ContentSerializer,
+    CourseSerializer,
+    LessonSerializer,
+    QuestionSerializer,
+    SectionSerializer,
+    TaskSerializer,
+    TaskSummarySerializer,
+)
 
 
 class CourseViewSet(viewsets.ModelViewSet):
@@ -28,11 +43,17 @@ class CourseViewSet(viewsets.ModelViewSet):
         if user.is_student:
             student = get_object_or_404(Student, user=user)
             queryset = Course.objects.filter(
-                grade=student.grade, language=student.language
+                grade__in=[student.grade, -1],
+                course_type="regular",
+                language=student.language,
             )
         elif user.is_parent and child_id:
             child = get_object_or_404(Child, parent=user.parent, pk=child_id)
-            queryset = Course.objects.filter(grade=child.grade, language=child.language)
+            queryset = Course.objects.filter(
+                grade__in=[child.grade, -1],
+                course_type="regular",
+                language=child.language,
+            )
         else:
             queryset = Course.objects.all()
 
