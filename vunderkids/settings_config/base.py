@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     "account",
     "tasks",
     "subscription",
+    "modo",
     "olympiad",
     "storages",
 ]
