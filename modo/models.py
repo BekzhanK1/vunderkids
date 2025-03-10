@@ -28,7 +28,6 @@ class Question(models.Model):
     test = models.ForeignKey(Test, related_name="questions", on_delete=models.CASCADE)
     title = models.CharField(max_length=255)
     order = models.IntegerField(default=0)
-    image = models.ImageField(upload_to="questions/images/", blank=True, null=True)
 
     class Meta:
         ordering = ["order"]
