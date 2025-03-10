@@ -98,8 +98,6 @@ class SchoolViewSet(viewsets.ModelViewSet):
 
         names_to_drop = ["Оқушының аты-жөні"]
         all_students = []
-        email_to_students = {}
-        duplicate_emails = {}
 
         def load_clean_sheet(sheet_name):
             df = pd.read_excel(xls, sheet_name=sheet_name, skiprows=1)

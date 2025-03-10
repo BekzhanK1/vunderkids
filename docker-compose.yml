@@ -46,7 +46,8 @@ services:
 
   celery_worker:
     build: .
-    command: celery -A vunderkids worker --loglevel=info
+    command: celery -A vunderkids worker --loglevel=info -c 4
+
     volumes:
       - .:/django
     environment:
